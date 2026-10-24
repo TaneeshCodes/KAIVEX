@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { ShaderButtons, PredictiveArcCanvas, AnimatedTopDock } from "@designcodeio/threeui";
 import "@designcodeio/threeui/style.css";
 import ReelCarousel from './components/ReelCarousel';
 import IntroAnimation from './components/IntroAnimation';
-import ProjectModal from './components/ProjectModal';
+import { usePerformanceTier } from './hooks/usePerformanceTier';
+
+const ProjectModal = lazy(() => import('./components/ProjectModal'));
 
 export default function App() {
   const [introActive, setIntroActive] = useState(() => {
@@ -20,11 +22,22 @@ export default function App() {
       return false;
     }
   });
+  const [introTransitioned, setIntroTransitioned] = useState(() => {
+    try {
+      return !!sessionStorage.getItem('kaivex_intro_seen');
+    } catch (_) {
+      return false;
+    }
+  });
+
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState('project');
 
   const frameRef = useRef(null);
   const targetLogoRef = useRef(null);
+
+  // Performance tier system and governor
+  const { tier, recordFrame } = usePerformanceTier(!introActive);
 
   // If intro already seen in this session, trigger entrance immediately
   useEffect(() => {
@@ -40,15 +53,20 @@ export default function App() {
         openProjectModal('project');
       }
     };
-    window.addEventListener('message', handleMsg);
+    window.addEventListener('message', handleMsg, { passive: true });
     return () => window.removeEventListener('message', handleMsg);
   }, []);
 
-  // Trigger page elements entrance animation
+  // Trigger page elements entrance animation (opacity & transform only, zero blur churn)
   const triggerEntrance = () => {
     const E = 'cubic-bezier(.2,.8,.2,1)';
     const go = (el, kf, delay, dur = 750) => {
-      if (el) el.animate(kf, { duration: dur, delay, easing: E, fill: 'backwards' });
+      if (!el) return;
+      el.style.willChange = 'transform, opacity';
+      const anim = el.animate(kf, { duration: dur, delay, easing: E, fill: 'backwards' });
+      anim.onfinish = () => {
+        el.style.willChange = 'auto';
+      };
     };
 
     const topEl = document.querySelector('.top');
@@ -65,8 +83,8 @@ export default function App() {
       go(
         s,
         [
-          { opacity: 0, transform: 'translateY(40px)', filter: 'blur(14px)' },
-          { opacity: 1, transform: 'none', filter: 'blur(0)' }
+          { opacity: 0, transform: 'translateY(40px)' },
+          { opacity: 1, transform: 'none' }
         ],
         180 + i * 140,
         900
@@ -85,6 +103,7 @@ export default function App() {
   };
 
   const handleTransitionStart = () => {
+    setIntroTransitioned(true);
     triggerEntrance();
   };
 
@@ -101,12 +120,11 @@ export default function App() {
     setModalOpen(true);
   };
 
-  // Detect activation inside the GlassAiButton iframe
+  // Detect activation inside the button iframe
   useEffect(() => {
     const handleBlur = () => {
       setTimeout(() => {
         if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
-          // Allow particle burst animation to play, then open project modal
           setTimeout(() => {
             openProjectModal('project');
           }, 850);
@@ -114,9 +132,11 @@ export default function App() {
       }, 50);
     };
 
-    window.addEventListener('blur', handleBlur);
+    window.addEventListener('blur', handleBlur, { passive: true });
     return () => window.removeEventListener('blur', handleBlur);
   }, []);
+
+  const carouselActive = !introActive || introTransitioned;
 
   return (
     <>
@@ -141,13 +161,18 @@ export default function App() {
         />
       )}
 
-      {/* Main Page Content */}
-      <main className="frame" id="frame" ref={frameRef}>
+      {/* Main Page Content: kept inert while intro overlay is opaque */}
+      <main
+        className="frame"
+        id="frame"
+        ref={frameRef}
+        inert={introActive && !introTransitioned ? '' : undefined}
+      >
         <header className="top">
           <a
             className="a logo"
             href="#"
-            style={{ '--x': 37, '--y': 29 }}
+            style={{ '--x': 37, '--y': 24 }}
             aria-label="Kaivex Home"
             onClick={(e) => {
               e.preventDefault();
@@ -162,7 +187,7 @@ export default function App() {
               className="logo-mark"
               style={{
                 opacity: logoDocked || !introActive ? 1 : 0,
-                transition: 'opacity 0.25s ease-in'
+                transition: 'opacity 0.25s ease-in',
               }}
             />
             <img
@@ -171,21 +196,21 @@ export default function App() {
               className="logo-wordmark"
               style={{
                 opacity: logoDocked || !introActive ? 1 : 0,
-                transition: 'opacity 0.4s ease-in 0.1s'
+                transition: 'opacity 0.4s ease-in 0.1s',
               }}
             />
           </a>
 
           {/* Centered ThreeUI AnimatedTopDock (Sable variant) */}
-          <div className="a nav-dock-wrap" style={{ '--x': 0, '--y': 25, '--w': '1440px' }}>
+          <div className="a nav-dock-wrap" style={{ '--x': 0, '--y': 22, '--w': '1440px' }}>
             <AnimatedTopDock
               variant="sable"
-              proximity={122}
+              proximity={140}
               spring={0.19}
               damping={0.70}
-              widthGrowth={17}
-              heightGrowth={16}
-              drop={3.5}
+              widthGrowth={20}
+              heightGrowth={18}
+              drop={4}
               onItemClick={(id) => {
                 if (id === 'contact' || id === 'about') {
                   openProjectModal('talk');
@@ -199,8 +224,13 @@ export default function App() {
           </div>
         </header>
 
-        {/* 3D Curved Perspective Carousel with Video Reels */}
-        <ReelCarousel frameRef={frameRef} />
+        {/* Tiered 3D Curved Perspective Carousel with Video Reels */}
+        <ReelCarousel
+          frameRef={frameRef}
+          tier={tier}
+          active={carouselActive}
+          onFrameDuration={recordFrame}
+        />
 
         {/* Hero Content */}
         <h1 className="a" id="h1" style={{ '--x': 0, '--y': 160, '--w': '1440px' }}>
@@ -218,10 +248,10 @@ export default function App() {
             <path pathLength="1" d="M268 421L289 380" />
             <path pathLength="1" d="M291 425L313 380" />
           </g>
-          {/* Arrow pointing to "Built to scale" note (orange stroke matching logo) */}
+          {/* Arrow pointing to "Built to scale" note */}
           <path className="beseen orange-stroke" pathLength="1" d="M1252 410C1344 420 1388 484 1352 548" />
           <path className="beseen orange-stroke" pathLength="1" d="M1334 532L1352 549L1367 530" />
-          {/* Arrow pointing to "Let's talk" note (orange stroke matching logo) */}
+          {/* Arrow pointing to "Let's talk" note */}
           <path className="zero-arrow orange-stroke" pathLength="1" d="M606 1004C630 1010 648 998 648 982" />
           <path className="zero-arrow orange-stroke" pathLength="1" d="M640 991L648 981L657 989" />
         </svg>
@@ -264,15 +294,18 @@ export default function App() {
             />
           </div>
         </div>
-
       </main>
 
-      {/* Consultation & Project Modal */}
-      <ProjectModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        initialType={modalType}
-      />
+      {/* Code-split Consultation & Project Modal */}
+      {modalOpen && (
+        <Suspense fallback={null}>
+          <ProjectModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            initialType={modalType}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

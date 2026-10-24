@@ -199,26 +199,6 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
     lockTrack: variant === "modern",
   }));
 
-  const retro = useShaderField(variant === "retro", async () => {
-    const { createRetroPixelField } = await import("./retroPixelField");
-    return (canvas: HTMLCanvasElement) => createRetroPixelField(canvas, () => ({
-      pixelSize: optionsRef.current.pixelSize,
-      noise: optionsRef.current.noise,
-      levels: optionsRef.current.levels,
-      speed: optionsRef.current.speed,
-    }));
-  });
-  const glass = useShaderField(variant === "glass", async () => {
-    const { createGlassParticleField } = await import("./glassParticleField");
-    return (canvas: HTMLCanvasElement) => createGlassParticleField(canvas, () => ({
-      count: optionsRef.current.particles,
-      thickness: optionsRef.current.thickness,
-      dispersion: optionsRef.current.dispersion,
-      specular: optionsRef.current.specular,
-      rim: optionsRef.current.rim,
-      drift: optionsRef.current.drift,
-    }));
-  });
 
   const dockItems = (itemClass: string, iconClass: string, viewBox: string) => items.map((item) => (
     <button
@@ -263,63 +243,7 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
     );
   }
 
-  if (variant === "retro") {
-    return (
-      <div
-        ref={retro.hostRef}
-        className={`animated-top-dock-component atd-retro${className ? ` ${className}` : ""}`}
-        style={{ "--atd-retro-scan": optionsRef.current.scanlines } as React.CSSProperties}
-      >
-        <canvas ref={retro.canvasRef} className="atd-retro__field" aria-hidden="true" />
-        <div className="atd-retro__vignette" aria-hidden="true" />
-        <header className="atd-retro__bar">
-          <div className="atd-retro__brand">
-            <span className="atd-retro__badge" aria-hidden="true">
-              <svg viewBox="0 0 7 7"><rect x="0" y="2" width="7" height="3" /><rect x="2" y="0" width="3" height="7" /></svg>
-            </span>
-            SABLE//OS
-          </div>
-          <nav ref={rootRef} className="atd-retro__dock" aria-label="Primary" data-dock-state="idle" data-dock-max="0.00">
-            {dockItems("atd-retro__item", "atd-retro__icon", "0 0 7 7")}
-          </nav>
-          <button className="atd-retro__cta" type="button">
-            <span aria-hidden="true">▶</span>
-            RUN
-          </button>
-        </header>
-        <p className="atd-retro__readout">
-          <span>MEM 640K</span>
-          <span>DITHER 8×8</span>
-          <span>PAL 8</span>
-        </p>
-        <p className="animated-top-dock-component__caption">FITTED STRIP · ORDERED DITHER</p>
-      </div>
-    );
-  }
 
-  if (variant === "glass") {
-    return (
-      <div ref={glass.hostRef} className={`animated-top-dock-component atd-glass${className ? ` ${className}` : ""}`} data-dock-frame>
-        <canvas ref={glass.canvasRef} className="atd-glass__field" aria-hidden="true" />
-        <header className="atd-glass__rail">
-          <a className="atd-glass__brand" href="#top-dock" onClick={(event) => event.preventDefault()}>
-            <span className="atd-glass__mark" aria-hidden="true">{BRAND_MARK}</span>
-            <span className="atd-glass__word">Aperture</span>
-          </a>
-          <span className="atd-glass__hairline" aria-hidden="true" />
-          <nav ref={rootRef} className="atd-glass__dock" aria-label="Primary" data-dock-state="idle" data-dock-max="0.00">
-            {dockItems("atd-glass__item", "atd-glass__icon", "0 0 16 16")}
-          </nav>
-          <span className="atd-glass__hairline" aria-hidden="true" />
-          <button className="atd-glass__cta" type="button">
-            Get the app
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8h9.2M8.8 4.2 12.6 8l-3.8 3.8" /></svg>
-          </button>
-        </header>
-        <p className="animated-top-dock-component__caption">VERTICAL RAIL · SCREEN-SPACE DISPERSION</p>
-      </div>
-    );
-  }
 
   return (
     <div className={`animated-top-dock-component${className ? ` ${className}` : ""}`} data-dock-frame>

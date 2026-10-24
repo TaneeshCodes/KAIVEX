@@ -1,8 +1,4 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
-import {
-  DataPixelArcCanvas,
-  type DataPixelArcCanvasProps,
-} from "../data-pixel-arc/DataPixelArcCanvas";
 import type { NeuformBatchEffectProps } from "../neuform-isolated/NeuformBatchEffects";
 import {
   createPredictiveArcRenderer,
@@ -10,32 +6,23 @@ import {
   type PredictiveArcOptions,
 } from "./predictiveArcRenderer";
 
-export type PredictiveArcVariant = "predictive" | "data-pixel" | "signal-particles" | "override-grid";
+export type PredictiveArcVariant = "predictive" | "signal-particles";
 
 type PredictiveVariantProps = Partial<PredictiveArcOptions> & {
   className?: string;
   variant?: "predictive";
 };
 
-type DataPixelVariantProps = DataPixelArcCanvasProps & {
-  variant: "data-pixel";
-};
-
 type BatchVariantProps = Partial<NeuformBatchEffectProps> & {
-  variant: "signal-particles" | "override-grid";
+  variant: "signal-particles";
 };
 
 export type PredictiveArcCanvasProps =
   | PredictiveVariantProps
-  | DataPixelVariantProps
   | BatchVariantProps;
 
 const SignalParticlesVariant = lazy(() =>
-  import("../neuform-isolated/NeuformBatchEffects").then((module) => ({ default: module.SignalParticles })),
-);
-
-const OverrideGridVariant = lazy(() =>
-  import("../neuform-isolated/NeuformBatchEffects").then((module) => ({ default: module.OverrideGrid })),
+  import("../neuform-isolated/NeuformBatchEffects").then((module) => ({ default: module.SignalParticles }))
 );
 
 function PredictiveArcRenderer({ className = "", ...props }: PredictiveVariantProps) {
@@ -99,25 +86,11 @@ function PredictiveArcRenderer({ className = "", ...props }: PredictiveVariantPr
 }
 
 export function PredictiveArcCanvas(props: PredictiveArcCanvasProps) {
-  if (props.variant === "data-pixel") {
-    const { variant: _variant, ...canvasProps } = props;
-    return <DataPixelArcCanvas {...canvasProps} />;
-  }
-
   if (props.variant === "signal-particles") {
     const { variant: _variant, ...effectProps } = props;
     return (
       <Suspense fallback={<div className="threeui-background predictive-arc" />}>
         <SignalParticlesVariant {...effectProps} />
-      </Suspense>
-    );
-  }
-
-  if (props.variant === "override-grid") {
-    const { variant: _variant, ...effectProps } = props;
-    return (
-      <Suspense fallback={<div className="threeui-background predictive-arc" />}>
-        <OverrideGridVariant {...effectProps} />
       </Suspense>
     );
   }

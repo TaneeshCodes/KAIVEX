@@ -4,75 +4,83 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
   const videoRef = useRef(null);
   const [muted, setMuted] = useState(true);
   const [phase, setPhase] = useState('playing'); // 'playing' | 'flying' | 'done'
-  const [flyingStyle, setFlyingStyle] = useState({});
+  const [flyingTransform, setFlyingTransform] = useState('');
+  const [targetCoords, setTargetCoords] = useState({ left: 37, top: 29, width: 40, height: 40 });
   const transitionFiredRef = useRef(false);
+
+  // Free video decoder function
+  const freeVideoDecoder = () => {
+    const video = videoRef.current;
+    if (video) {
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        // Clear all sources
+        while (video.firstChild) {
+          video.removeChild(video.firstChild);
+        }
+        video.load();
+      } catch (_) {}
+    }
+  };
+
+  const startTransition = () => {
+    if (transitionFiredRef.current) return;
+    transitionFiredRef.current = true;
+
+    // Notify parent that entrance animations and handoff can begin
+    if (onTransitionStart) onTransitionStart();
+
+    // 1. Measure target corner position once before animation starts
+    let targetRect = { left: 37, top: 24, width: 48, height: 48 };
+    if (targetLogoRef?.current) {
+      const rect = targetLogoRef.current.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        targetRect = {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width || 48,
+          height: rect.height || 48,
+        };
+      }
+    }
+    setTargetCoords(targetRect);
+
+    // 2. Measure center start position once
+    const centerSize = Math.min(window.innerWidth * 0.28, 170);
+    const startX = window.innerWidth / 2 - centerSize / 2;
+    const startY = window.innerHeight / 2 - centerSize / 2;
+
+    // 3. FLIP animation: Invert from center to corner
+    const initialTranslateX = startX - targetRect.left;
+    const initialTranslateY = startY - targetRect.top;
+    const initialScale = centerSize / targetRect.width;
+
+    setPhase('flying');
+    setFlyingTransform(
+      `translate3d(${initialTranslateX.toFixed(1)}px, ${initialTranslateY.toFixed(1)}px, 0) scale(${initialScale.toFixed(3)})`
+    );
+
+    // Play FLIP transition smoothly to target (0,0 scale 1)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setFlyingTransform('translate3d(0, 0, 0) scale(1)');
+      });
+    });
+
+    // 4. Once flight lands, free the video decoder and complete handoff
+    setTimeout(() => {
+      freeVideoDecoder();
+      setPhase('done');
+      if (onComplete) onComplete();
+    }, 950);
+  };
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const startTransition = () => {
-      if (transitionFiredRef.current) return;
-      transitionFiredRef.current = true;
-
-      // Notify parent that entrance animations can begin
-      if (onTransitionStart) onTransitionStart();
-
-      // Get target corner position of the navbar logo
-      let targetRect = { left: 37, top: 29, width: 40, height: 40 };
-      if (targetLogoRef?.current) {
-        const rect = targetLogoRef.current.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          targetRect = {
-            left: rect.left,
-            top: rect.top,
-            width: rect.width || 40,
-            height: rect.height || 40
-          };
-        }
-      }
-
-      // Initial center position (center of screen, matching video logo)
-      const centerSize = Math.min(window.innerWidth * 0.28, 170);
-      const startX = window.innerWidth / 2 - centerSize / 2;
-      const startY = window.innerHeight / 2 - centerSize / 2;
-
-      setPhase('flying');
-      setFlyingStyle({
-        left: `${startX}px`,
-        top: `${startY}px`,
-        width: `${centerSize}px`,
-        height: `${centerSize}px`,
-        opacity: 1,
-        transform: 'scale(1)',
-        filter: 'drop-shadow(0 0 35px rgba(224, 67, 31, 0.9)) drop-shadow(0 0 60px rgba(255, 102, 54, 0.5))'
-      });
-
-      // Animate smoothly to the corner in the next frame
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setFlyingStyle({
-            left: `${targetRect.left}px`,
-            top: `${targetRect.top}px`,
-            width: `${targetRect.width}px`,
-            height: `${targetRect.height}px`,
-            opacity: 1,
-            transform: 'scale(1)',
-            filter: 'drop-shadow(0 0 10px rgba(224, 67, 31, 0.5))',
-            transition: 'all 0.9s cubic-bezier(0.16, 1, 0.3, 1)'
-          });
-        });
-      });
-
-      // Once flight lands in corner, complete the handoff
-      setTimeout(() => {
-        setPhase('done');
-        if (onComplete) onComplete();
-      }, 950);
-    };
-
     const handleTimeUpdate = () => {
-      // Trigger smooth transition slightly before the video cuts off
       if (video.duration && video.currentTime >= video.duration - 0.65) {
         startTransition();
       }
@@ -82,19 +90,16 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
       startTransition();
     };
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('ended', handleEnded);
+    video.addEventListener('timeupdate', handleTimeUpdate, { passive: true });
+    video.addEventListener('ended', handleEnded, { passive: true });
 
-    // Auto-play video
     const playPromise = video.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        // Autoplay policy fallback: muted is default, but if failed, transition after timeout
         setTimeout(startTransition, 5000);
       });
     }
 
-    // Safety timeout in case video is blocked
     const fallbackTimer = setTimeout(() => {
       if (!transitionFiredRef.current) {
         startTransition();
@@ -107,62 +112,12 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
         video.removeEventListener('timeupdate', handleTimeUpdate);
         video.removeEventListener('ended', handleEnded);
       }
+      freeVideoDecoder();
     };
-  }, [onTransitionStart, onComplete, targetLogoRef]);
+  }, []);
 
   const handleSkip = () => {
-    if (transitionFiredRef.current) return;
-    transitionFiredRef.current = true;
-
-    if (onTransitionStart) onTransitionStart();
-
-    let targetRect = { left: 37, top: 29, width: 40, height: 40 };
-    if (targetLogoRef?.current) {
-      const rect = targetLogoRef.current.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        targetRect = {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width || 40,
-          height: rect.height || 40
-        };
-      }
-    }
-
-    const centerSize = Math.min(window.innerWidth * 0.28, 170);
-    const startX = window.innerWidth / 2 - centerSize / 2;
-    const startY = window.innerHeight / 2 - centerSize / 2;
-
-    setPhase('flying');
-    setFlyingStyle({
-      left: `${startX}px`,
-      top: `${startY}px`,
-      width: `${centerSize}px`,
-      height: `${centerSize}px`,
-      opacity: 1,
-      transform: 'scale(1)',
-      filter: 'drop-shadow(0 0 35px rgba(224, 67, 31, 0.9))'
-    });
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setFlyingStyle({
-          left: `${targetRect.left}px`,
-          top: `${targetRect.top}px`,
-          width: `${targetRect.width}px`,
-          height: `${targetRect.height}px`,
-          opacity: 1,
-          transform: 'scale(1)',
-          filter: 'drop-shadow(0 0 10px rgba(224, 67, 31, 0.5))',
-          transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
-        });
-      });
-    });
-
-    setTimeout(() => {
-      setPhase('done');
-      if (onComplete) onComplete();
-    }, 850);
+    startTransition();
   };
 
   const toggleSound = () => {
@@ -184,17 +139,19 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
         style={{
           opacity: phase === 'flying' ? 0 : 1,
           pointerEvents: phase === 'flying' ? 'none' : 'auto',
-          transition: 'opacity 0.75s ease-out'
+          transition: 'opacity 0.75s ease-out',
         }}
       >
         <video
           ref={videoRef}
           id="iv"
-          src="/intro-video.mp4"
           muted={muted}
           playsInline
           preload="auto"
-        />
+        >
+          <source src="/intro-video.webm" type="video/webm" />
+          <source src="/intro-video.mp4" type="video/mp4" />
+        </video>
 
         {phase === 'playing' && (
           <>
@@ -208,18 +165,25 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
         )}
       </div>
 
-      {/* Floating Logo that swoops from center to corner */}
+      {/* Floating Logo FLIP transition */}
       {phase === 'flying' && (
         <div
           className="flying-logo"
           style={{
             position: 'fixed',
+            left: `${targetCoords.left}px`,
+            top: `${targetCoords.top}px`,
+            width: `${targetCoords.width}px`,
+            height: `${targetCoords.height}px`,
+            transform: flyingTransform,
+            transformOrigin: 'top left',
+            transition: 'transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.9s ease',
             zIndex: 9999,
             pointerEvents: 'none',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            ...flyingStyle
+            willChange: 'transform',
           }}
         >
           <img
@@ -229,7 +193,8 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
               width: '100%',
               height: '100%',
               objectFit: 'contain',
-              display: 'block'
+              display: 'block',
+              filter: 'drop-shadow(0 0 16px rgba(224, 67, 31, 0.75))',
             }}
           />
         </div>
