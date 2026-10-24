@@ -1,4 +1,4 @@
-import{i as e,n as t,r as n,t as r}from"./index-CQH57MqC.js";var i=e(n(),1),a=t(),o=10,s=196,c=1960,l=1/.7111,u=`
+import{i as e,n as t,r as n,t as r}from"./index-Ba2boiiz.js";var i=e(n(),1),a=t(),o=10,s=196,c=1960,l=1/.7111,u=`
 attribute vec2 a_pos;
 attribute vec2 a_uv;
 attribute vec2 a_local;

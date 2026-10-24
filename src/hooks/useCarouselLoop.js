@@ -64,17 +64,20 @@ export function useCarouselLoop({
       host.style.width = '1440px';
       host.style.height = '1080px';
       host.style.transform = '';
+      host.style.transformOrigin = '0 0';
     } else {
       l.S = 1;
-      l.K = window.innerWidth / 560;
-      l.R = window.innerWidth / 2 / l.K;
-      l.CX = l.R;
-      l.CY = 125 / l.K;
-      l.hostWidth = window.innerWidth / l.K;
-      l.hostHeight = 250 / l.K;
-      host.style.width = l.hostWidth + 'px';
-      host.style.height = l.hostHeight + 'px';
+      const stageW = Math.max(window.innerWidth, 320);
+      l.K = stageW / 560;
+      l.R = 280;
+      l.CX = 280;
+      l.CY = 135;
+      l.hostWidth = 560;
+      l.hostHeight = 270;
+      host.style.width = '560px';
+      host.style.height = '270px';
       host.style.transform = 'scale(' + l.K + ')';
+      host.style.transformOrigin = 'top left';
     }
   }, [hostRef, frameRef]);
 
