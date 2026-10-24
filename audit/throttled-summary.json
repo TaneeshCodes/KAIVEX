@@ -1,0 +1,18 @@
+{
+  "navigation": {
+    "fcp": 1340,
+    "domContentLoaded": 984.8999999999069,
+    "loadEvent": 985.7999999998137
+  },
+  "heroFps": {
+    "frames": 300,
+    "longFrames": 0,
+    "avgFps": 60,
+    "totalTime": 5004.600000000093
+  },
+  "scrollFps": {
+    "scrollFrames": 121,
+    "droppedScrollFrames": 1,
+    "avgScrollFps": 61
+  }
+}

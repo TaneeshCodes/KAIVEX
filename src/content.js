@@ -140,7 +140,7 @@ export const WORK_DATA = {
       tags: ["SaaS", "Cloud"],
       hue: 210,
       metric: "00%", /* PLACEHOLDER */
-      imageUrl: "/work/project-1.png",
+      imageUrl: "/work/project-1.webp",
       gradient: "from-emerald-500/75 via-teal-700/75 to-emerald-950/85",
       cssGradient: "linear-gradient(to top, rgba(2, 44, 34, 0.96) 0%, rgba(13, 148, 136, 0.75) 50%, rgba(16, 185, 129, 0.55) 100%)",
       challenge: "Legacy transactional systems suffered severe latency during market peaks, dropping customer requests under high load.", /* PLACEHOLDER */
@@ -163,7 +163,7 @@ export const WORK_DATA = {
       tags: ["AI / ML", "Automation"],
       hue: 275,
       metric: "00%", /* PLACEHOLDER */
-      imageUrl: "/work/project-2.png",
+      imageUrl: "/work/project-2.webp",
       gradient: "from-slate-800/85 via-slate-900/85 to-slate-950/90",
       cssGradient: "linear-gradient(to top, rgba(2, 6, 23, 0.96) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(51, 65, 85, 0.6) 100%)",
       challenge: "Clinical staff spent 00+ hours per week manually categorizing complex medical intake forms and lab summaries.", /* PLACEHOLDER */
@@ -186,7 +186,7 @@ export const WORK_DATA = {
       tags: ["Websites", "Web", "SEO", "E-Commerce"],
       hue: 195,
       metric: "00%", /* PLACEHOLDER */
-      imageUrl: "/work/project-3.png",
+      imageUrl: "/work/project-3.webp",
       gradient: "from-amber-500/75 via-orange-600/75 to-amber-950/85",
       cssGradient: "linear-gradient(to top, rgba(69, 26, 3, 0.96) 0%, rgba(234, 88, 12, 0.75) 50%, rgba(245, 158, 11, 0.55) 100%)",
       challenge: "Slow mobile page performance drove high bounce rates and constrained organic search rankings across international regions.", /* PLACEHOLDER */
@@ -209,7 +209,7 @@ export const WORK_DATA = {
       tags: ["Apps", "Mobile", "Cross-platform", "Logistics"],
       hue: 240,
       metric: "00%", /* PLACEHOLDER */
-      imageUrl: "/work/project-4.png",
+      imageUrl: "/work/project-4.webp",
       gradient: "from-sky-400/75 via-cyan-600/75 to-teal-950/85",
       cssGradient: "linear-gradient(to top, rgba(4, 47, 46, 0.96) 0%, rgba(8, 145, 178, 0.75) 50%, rgba(56, 189, 248, 0.55) 100%)",
       challenge: "Field personnel required reliable route synchronization and proof-of-delivery in regions with intermittent cellular signal.", /* PLACEHOLDER */
@@ -232,7 +232,7 @@ export const WORK_DATA = {
       tags: ["Vision", "Edge"],
       hue: 340,
       metric: "00%", /* PLACEHOLDER */
-      imageUrl: "/work/project-5.png",
+      imageUrl: "/work/project-5.webp",
       gradient: "from-rose-500/75 via-red-600/75 to-rose-950/85",
       cssGradient: "linear-gradient(to top, rgba(76, 5, 25, 0.96) 0%, rgba(225, 29, 72, 0.75) 50%, rgba(244, 63, 94, 0.55) 100%)",
       challenge: "Manual inspection lines struggled to identify micro-surface fissures at high production line throughput.", /* PLACEHOLDER */
@@ -255,7 +255,7 @@ export const WORK_DATA = {
       tags: ["SaaS", "Automation"],
       hue: 160,
       metric: "00%", /* PLACEHOLDER */
-      imageUrl: "/work/project-6.png",
+      imageUrl: "/work/project-6.webp",
       gradient: "from-blue-500/75 via-indigo-600/75 to-purple-950/85",
       cssGradient: "linear-gradient(to top, rgba(30, 27, 75, 0.96) 0%, rgba(79, 70, 229, 0.75) 50%, rgba(59, 130, 246, 0.55) 100%)",
       challenge: "Sales operations teams lost hours weekly copying and matching lead records across disconnected CRM instances.", /* PLACEHOLDER */

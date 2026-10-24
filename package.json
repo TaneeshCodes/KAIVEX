@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "optimize:services": "node scripts/optimize-services.mjs"
+    "optimize:services": "node scripts/optimize-services.mjs",
+    "perf": "node scripts/perf-budget.mjs"
   },
   "keywords": [],
   "author": "",

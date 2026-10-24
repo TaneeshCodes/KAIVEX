@@ -77,6 +77,22 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
   };
 
   useEffect(() => {
+    // Check if network is slow, data saver is on, memory <= 2GB, or reduced motion preferred
+    const shouldSkip = () => {
+      try {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn && (conn.saveData || conn.effectiveType === '2g' || conn.effectiveType === '3g')) return true;
+        if (navigator.deviceMemory && navigator.deviceMemory <= 2) return true;
+      } catch (_) {}
+      return false;
+    };
+
+    if (shouldSkip()) {
+      startTransition();
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -96,18 +112,19 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
     const playPromise = video.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        setTimeout(startTransition, 5000);
+        setTimeout(startTransition, 3000);
       });
     }
 
-    const fallbackTimer = setTimeout(() => {
+    // 8-second safety timeout so black overlay is NEVER stuck
+    const safetyTimer = setTimeout(() => {
       if (!transitionFiredRef.current) {
         startTransition();
       }
-    }, 5500);
+    }, 8000);
 
     return () => {
-      clearTimeout(fallbackTimer);
+      clearTimeout(safetyTimer);
       if (video) {
         video.removeEventListener('timeupdate', handleTimeUpdate);
         video.removeEventListener('ended', handleEnded);
@@ -147,7 +164,8 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
           id="iv"
           muted={muted}
           playsInline
-          preload="auto"
+          preload="metadata"
+          poster="/intro-poster.webp"
         >
           <source src="/intro-video.webm" type="video/webm" />
           <source src="/intro-video.mp4" type="video/mp4" />

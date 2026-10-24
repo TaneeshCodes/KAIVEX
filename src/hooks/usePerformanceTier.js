@@ -11,21 +11,25 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 function getInitialTier() {
   if (typeof window === 'undefined') return 'high';
 
-  // 1. URL parameter override for testing (?tier=high|mid|low)
+  // 1. URL parameter override for testing (?perf=high|medium|low or ?tier=high|mid|low)
   try {
     const params = new URLSearchParams(window.location.search);
-    const paramTier = params.get('tier')?.toLowerCase();
-    if (paramTier === 'high' || paramTier === 'mid' || paramTier === 'low') {
-      sessionStorage.setItem('kaivex_perf_tier', paramTier);
-      return paramTier;
+    const paramPerf = (params.get('perf') || params.get('tier'))?.toLowerCase();
+    const normalized = paramPerf === 'mid' ? 'medium' : paramPerf;
+    if (normalized === 'high' || normalized === 'medium' || normalized === 'low') {
+      sessionStorage.setItem('kaivex_perf_tier', normalized);
+      document.documentElement.setAttribute('data-perf', normalized);
+      return normalized;
     }
   } catch (_) {}
 
   // 2. Previously stored session decision
   try {
     const saved = sessionStorage.getItem('kaivex_perf_tier');
-    if (saved === 'high' || saved === 'mid' || saved === 'low') {
-      return saved;
+    const normalized = saved === 'mid' ? 'medium' : saved;
+    if (normalized === 'high' || normalized === 'medium' || normalized === 'low') {
+      document.documentElement.setAttribute('data-perf', normalized);
+      return normalized;
     }
   } catch (_) {}
 
@@ -54,7 +58,7 @@ function getInitialTier() {
 
   // 5. Mid-tier hardware heuristic
   if ((memory && memory <= 4) || (cores && cores <= 4)) {
-    return 'mid';
+    return 'medium';
   }
 
   return 'high';
@@ -72,10 +76,19 @@ export function usePerformanceTier(isIntroFinished = true) {
   const setTier = useCallback((newTier) => {
     tierRef.current = newTier;
     setTierState(newTier);
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-perf', newTier);
+    }
     try {
       sessionStorage.setItem('kaivex_perf_tier', newTier);
     } catch (_) {}
   }, []);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-perf', tier);
+    }
+  }, [tier]);
 
   // Frame time reporting method for the carousel loop
   const recordFrame = useCallback((frameMs) => {
@@ -98,8 +111,8 @@ export function usePerformanceTier(isIntroFinished = true) {
       } else if (median > 20) {
         // Moderate drops (>20ms per frame = <50fps): drop one tier
         if (tierRef.current === 'high') {
-          setTier('mid');
-        } else if (tierRef.current === 'mid') {
+          setTier('medium');
+        } else if (tierRef.current === 'medium') {
           setTier('low');
         }
       } else {

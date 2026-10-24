@@ -76,6 +76,15 @@ export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
       setIsRevealed(true);
       return;
     }
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsRevealed(true);
+        el.classList.add('is-revealed');
+        obs.disconnect();
+      }
+    }, { threshold: 0.05, rootMargin: '150px' });
+    obs.observe(el);
+
     const observer = new MutationObserver(() => {
       if (el.classList.contains('is-revealed')) {
         setIsRevealed(true);
@@ -83,7 +92,11 @@ export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
       }
     });
     observer.observe(el, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
+
+    return () => {
+      obs.disconnect();
+      observer.disconnect();
+    };
   }, []);
 
   const handleFilterChange = (chip) => {
@@ -158,7 +171,7 @@ export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
                 }}
                 className="group relative flex h-[370px] cursor-pointer flex-col justify-between overflow-hidden rounded-2xl bg-[#050507] p-7 text-white shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-2xl border border-white/10"
                 style={{
-                  backgroundImage: `url(${project.imageUrl})`,
+                  backgroundImage: isRevealed ? `url(${project.imageUrl})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   '--delay-index': idx

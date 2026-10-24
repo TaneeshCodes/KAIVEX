@@ -1,0 +1,1 @@
+import{i as e,r as t}from"./index-VB_RovfF.js";e();var n=t();function r({eyebrow:e,title:t,align:r=`left`,id:i}){return(0,n.jsxs)(`div`,{className:`section-heading-wrap ${r===`center`?`text-center`:``}`,children:[e&&(0,n.jsx)(`span`,{className:`section-eyebrow`,children:e}),(0,n.jsx)(`h2`,{id:i,className:`section-h2`,children:t})]})}export{r as t};

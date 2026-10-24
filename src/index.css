@@ -1,6 +1,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted WOFF2 fonts with size-adjusted fallbacks */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter-fallback';
+  src: local('Arial'), local('Helvetica');
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+  size-adjust: 107%;
+}
+
+@font-face {
+  font-family: 'Inter Tight';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-tight-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter-Tight-fallback';
+  src: local('Arial'), local('Helvetica');
+  ascent-override: 89%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+  size-adjust: 105%;
+}
+
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/caveat-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
@@ -33,6 +79,26 @@
   --ink: #F4F4F5;
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-bg: rgba(255, 255, 255, 0.04);
+}
+
+/* Phase 4 Adaptive Performance Tier Rules */
+html[data-perf="low"] .svc-card-clean,
+html[data-perf="low"] .modal-card,
+html[data-perf="low"] .sticky-navbar {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-perf="medium"] .svc-card-clean,
+html[data-perf="medium"] .modal-card,
+html[data-perf="medium"] .sticky-navbar {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html[data-perf="low"] .svc-art-ambient-spotlight {
+  display: none !important;
 }
 
 * {
@@ -1712,6 +1778,9 @@ textarea:focus-visible,
   position: relative;
   z-index: 10;
   background: transparent;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 900px;
+  contain: layout paint style;
 }
 
 .section-container {

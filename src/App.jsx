@@ -4,14 +4,14 @@ import "@designcodeio/threeui/style.css";
 import ReelCarousel from './components/ReelCarousel';
 import IntroAnimation from './components/IntroAnimation';
 import StickyNavbar from './components/StickyNavbar';
-import ServicesSection from './components/ServicesSection';
-import WorkSection from './components/WorkSection';
-import CaseStudyModal from './components/CaseStudyModal';
-import ProductsSection from './components/ProductsSection';
-import AboutSection from './components/AboutSection';
-import ContactSection from './components/ContactSection';
 import { usePerformanceTier } from './hooks/usePerformanceTier';
 
+const ServicesSection = lazy(() => import('./components/ServicesSection'));
+const WorkSection = lazy(() => import('./components/WorkSection'));
+const ProductsSection = lazy(() => import('./components/ProductsSection'));
+const AboutSection = lazy(() => import('./components/AboutSection'));
+const ContactSection = lazy(() => import('./components/ContactSection'));
+const CaseStudyModal = lazy(() => import('./components/CaseStudyModal'));
 const ProjectModal = lazy(() => import('./components/ProjectModal'));
 
 export default function App() {
@@ -56,6 +56,23 @@ export default function App() {
   useEffect(() => {
     if (!introActive) {
       triggerEntrance();
+    }
+  }, []);
+
+  // Prefetch below-the-fold sections during browser idle time so they feel instant
+  useEffect(() => {
+    const prefetch = () => {
+      import('./components/ServicesSection');
+      import('./components/WorkSection');
+      import('./components/ProductsSection');
+      import('./components/AboutSection');
+      import('./components/ContactSection');
+      import('./components/CaseStudyModal');
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(prefetch, { timeout: 3000 });
+    } else {
+      setTimeout(prefetch, 1800);
     }
   }, []);
 
@@ -125,15 +142,14 @@ export default function App() {
   };
 
   // Scroll reveal observer (threshold .12, once)
+  // Scroll reveal observer (threshold .12, once, observing dynamically mounted elements)
   useEffect(() => {
-    const revealElements = document.querySelectorAll('[data-reveal]');
-    if (!revealElements.length) return;
-
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      revealElements.forEach((el) => el.classList.add('is-revealed'));
+      document.querySelectorAll('[data-reveal]').forEach((el) => el.classList.add('is-revealed'));
       return;
     }
 
+    const observedSet = new WeakSet();
     const observer = new IntersectionObserver(
       (entries, obs) => {
         entries.forEach((entry) => {
@@ -146,9 +162,25 @@ export default function App() {
       { threshold: 0.12 }
     );
 
-    revealElements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [introActive]);
+    const scanAndObserve = () => {
+      document.querySelectorAll('[data-reveal]').forEach((el) => {
+        if (!observedSet.has(el)) {
+          observedSet.add(el);
+          observer.observe(el);
+        }
+      });
+    };
+
+    scanAndObserve();
+
+    const mutObserver = new MutationObserver(scanAndObserve);
+    mutObserver.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      mutObserver.disconnect();
+    };
+  }, []);
 
   // Section observer for active nav highlighting and hero sticky observer
   useEffect(() => {
@@ -388,33 +420,35 @@ export default function App() {
         </main>
       </section>
 
-      {/* Five New Content Sections in exact order */}
-      <ServicesSection
-        onOpenService={(service) => openProjectModal('project', service)}
-        onStartProject={() => openProjectModal('project')}
-      />
-      
-      <WorkSection
-        onOpenCaseStudy={(project) => setActiveCaseStudy(project)}
-        onStartProject={() => openProjectModal('project')}
-      />
+      {/* Five New Content Sections in exact order with Suspense */}
+      <Suspense fallback={null}>
+        <ServicesSection
+          onOpenService={(service) => openProjectModal('project', service)}
+          onStartProject={() => openProjectModal('project')}
+        />
+        
+        <WorkSection
+          onOpenCaseStudy={(project) => setActiveCaseStudy(project)}
+          onStartProject={() => openProjectModal('project')}
+        />
 
-      <ProductsSection
-        onRequestDemo={(prodName) => openProjectModal('project', null, `Requesting demo for ${prodName}`)}
-        onCustomTalk={() => openProjectModal('talk')}
-      />
+        <ProductsSection
+          onRequestDemo={(prodName) => openProjectModal('project', null, `Requesting demo for ${prodName}`)}
+          onCustomTalk={() => openProjectModal('talk')}
+        />
 
-      <AboutSection />
+        <AboutSection />
 
-      <ContactSection onOpenModal={(type) => openProjectModal(type)} />
+        <ContactSection onOpenModal={(type) => openProjectModal(type)} />
 
-      {/* Case Study Dialog Modal */}
-      <CaseStudyModal
-        project={activeCaseStudy}
-        isOpen={!!activeCaseStudy}
-        onClose={() => setActiveCaseStudy(null)}
-        onStartSimilar={(service) => openProjectModal('project', service)}
-      />
+        {/* Case Study Dialog Modal */}
+        <CaseStudyModal
+          project={activeCaseStudy}
+          isOpen={!!activeCaseStudy}
+          onClose={() => setActiveCaseStudy(null)}
+          onStartSimilar={(service) => openProjectModal('project', service)}
+        />
+      </Suspense>
 
       {/* Code-split Consultation & Project Modal */}
       {modalOpen && (

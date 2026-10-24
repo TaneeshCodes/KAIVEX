@@ -234,6 +234,8 @@ export default function ServicesSection({ onOpenService, onStartProject }) {
                     <img
                       className="svc-art-img"
                       src={item.imageSrc}
+                      srcSet={`${item.imageSrc.replace('.webp', '-440.webp')} 440w, ${item.imageSrc} 800w`}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                       alt={item.alt}
                       width={800}
                       height={800}

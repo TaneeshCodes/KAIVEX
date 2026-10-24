@@ -8,8 +8,13 @@ export default function CaseStudyModal({ project, isOpen, onClose, onStartSimila
     if (!isOpen) return;
     previouslyFocusedRef.current = document.activeElement;
 
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
     document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
 
     // Focus first focusable element inside modal
     const focusableElements = modalRef.current?.querySelectorAll(
@@ -46,6 +51,7 @@ export default function CaseStudyModal({ project, isOpen, onClose, onStartSimila
 
     return () => {
       document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
       window.removeEventListener('keydown', handleKeyDown);
       if (previouslyFocusedRef.current?.focus) {
         previouslyFocusedRef.current.focus();
