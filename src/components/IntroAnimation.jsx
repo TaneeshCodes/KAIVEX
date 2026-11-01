@@ -96,6 +96,25 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
     const video = videoRef.current;
     if (!video) return;
 
+    // Explicitly guarantee muted DOM properties for zero-delay autoplay
+    video.defaultMuted = true;
+    video.muted = true;
+
+    let rfcId = null;
+    const checkFrame = () => {
+      if (video.duration && video.currentTime >= video.duration - 0.65) {
+        startTransition();
+        return;
+      }
+      if ('requestVideoFrameCallback' in video) {
+        rfcId = video.requestVideoFrameCallback(checkFrame);
+      }
+    };
+
+    if ('requestVideoFrameCallback' in video) {
+      rfcId = video.requestVideoFrameCallback(checkFrame);
+    }
+
     const handleTimeUpdate = () => {
       if (video.duration && video.currentTime >= video.duration - 0.65) {
         startTransition();
@@ -125,6 +144,9 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
 
     return () => {
       clearTimeout(safetyTimer);
+      if (rfcId !== null && video && 'cancelVideoFrameCallback' in video) {
+        video.cancelVideoFrameCallback(rfcId);
+      }
       if (video) {
         video.removeEventListener('timeupdate', handleTimeUpdate);
         video.removeEventListener('ended', handleEnded);
@@ -162,13 +184,14 @@ export default function IntroAnimation({ onTransitionStart, onComplete, targetLo
         <video
           ref={videoRef}
           id="iv"
+          autoPlay
           muted={muted}
           playsInline
-          preload="metadata"
+          preload="auto"
           poster="/intro-poster.webp"
         >
-          <source src="/intro-video.webm" type="video/webm" />
           <source src="/intro-video.mp4" type="video/mp4" />
+          <source src="/intro-video.webm" type="video/webm" />
         </video>
 
         {phase === 'playing' && (

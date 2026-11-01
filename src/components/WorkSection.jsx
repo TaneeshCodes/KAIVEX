@@ -1,118 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import SectionHeading from './SectionHeading';
 import { WORK_DATA } from '../content';
-
-function WorkArtIcon({ category }) {
-  const strokeProps = {
-    width: '36',
-    height: '36',
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: '#ffffff',
-    strokeWidth: '1.5',
-    strokeLinecap: 'round',
-    strokeLinejoin: 'round'
-  };
-
-  switch (category) {
-    case 'Websites':
-      return (
-        <svg {...strokeProps} aria-hidden="true">
-          <rect x="2" y="3" width="20" height="18" rx="2" />
-          <line x1="2" y1="8" x2="22" y2="8" />
-          <polyline points="9 13 6 16 9 19" />
-          <polyline points="15 13 18 16 15 19" />
-        </svg>
-      );
-    case 'Apps':
-      return (
-        <svg {...strokeProps} aria-hidden="true">
-          <rect x="5" y="2" width="14" height="20" rx="3" />
-          <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5" />
-        </svg>
-      );
-    case 'AI / ML':
-      return (
-        <svg {...strokeProps} aria-hidden="true">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
-          <circle cx="12" cy="12" r="3.5" />
-        </svg>
-      );
-    case 'SaaS':
-      return (
-        <svg {...strokeProps} aria-hidden="true">
-          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-          <polyline points="12 13 12 17" />
-        </svg>
-      );
-    case 'Vision':
-      return (
-        <svg {...strokeProps} aria-hidden="true">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
-        </svg>
-      );
-    default:
-      return (
-        <svg {...strokeProps} aria-hidden="true">
-          <polygon points="12 2 2 7 12 12 22 7 12 2" />
-          <polyline points="2 17 12 22 22 17" />
-        </svg>
-      );
-  }
-}
+import { gsap, ScrollTrigger, EASINGS, prefersReducedMotion } from '../lib/gsap';
 
 export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
   const { eyebrow, h2, filterChips, projects } = WORK_DATA;
   const [activeFilter, setActiveFilter] = useState('All');
-  const [isFading, setIsFading] = useState(false);
-  const [isRevealed, setIsRevealed] = useState(false);
-  const wrapperRef = React.useRef(null);
+  const [renderedFilter, setRenderedFilter] = useState('All');
 
-  React.useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    if (el.classList.contains('is-revealed')) {
-      setIsRevealed(true);
-      return;
-    }
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsRevealed(true);
-        el.classList.add('is-revealed');
-        obs.disconnect();
-      }
-    }, { threshold: 0.05, rootMargin: '150px' });
-    obs.observe(el);
+  const sectionRef = useRef(null);
+  const chipsRef = useRef(null);
+  const cardsContainerRef = useRef(null);
+  const footerBtnRef = useRef(null);
+  const isFirstMount = useRef(true);
 
-    const observer = new MutationObserver(() => {
-      if (el.classList.contains('is-revealed')) {
-        setIsRevealed(true);
-        observer.disconnect();
-      }
-    });
-    observer.observe(el, { attributes: true, attributeFilter: ['class'] });
-
-    return () => {
-      obs.disconnect();
-      observer.disconnect();
-    };
-  }, []);
-
-  const handleFilterChange = (chip) => {
-    if (chip === activeFilter) return;
-    setIsFading(true);
-    setTimeout(() => {
-      setActiveFilter(chip);
-      setIsFading(false);
-    }, 150);
-  };
-
-  const filteredProjects = activeFilter === 'All'
+  const filteredProjects = renderedFilter === 'All'
     ? projects
     : projects.filter((p) => {
         if (!p.category) return false;
-        const normFilter = activeFilter.trim().toLowerCase();
+        const normFilter = renderedFilter.trim().toLowerCase();
         const normCat = p.category.trim().toLowerCase();
         if (normCat === normFilter) return true;
         if (Array.isArray(p.tags) && p.tags.some((t) => t.trim().toLowerCase() === normFilter)) {
@@ -121,13 +27,162 @@ export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
         return false;
       });
 
+  // Initial scroll-triggered reveal
+  useEffect(() => {
+    if (!sectionRef.current) return;
+
+    if (prefersReducedMotion()) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      // 1. Filter chips staggered entrance
+      if (chipsRef.current) {
+        const chips = chipsRef.current.querySelectorAll('.filter-chip');
+        gsap.fromTo(
+          chips,
+          { opacity: 0, y: 15, scale: 0.96 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.6,
+            stagger: 0.05,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: chipsRef.current,
+              start: 'top 88%',
+              once: true,
+            },
+          }
+        );
+      }
+
+      // 2. Initial projects grid entrance
+      if (cardsContainerRef.current) {
+        const cards = cardsContainerRef.current.querySelectorAll('article');
+        gsap.fromTo(
+          cards,
+          { opacity: 0, y: 48, scale: 0.97 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.9,
+            stagger: 0.09,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: cardsContainerRef.current,
+              start: 'top 84%',
+              once: true,
+            },
+          }
+        );
+      }
+
+      // 3. Footer button entrance
+      if (footerBtnRef.current) {
+        gsap.fromTo(
+          footerBtnRef.current,
+          { opacity: 0, y: 22, scale: 0.96 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.75,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: footerBtnRef.current,
+              start: 'top 92%',
+              once: true,
+            },
+          }
+        );
+      }
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  // Handle filter switching with smooth GSAP transition
+  const handleFilterChange = (chip) => {
+    if (chip === activeFilter) return;
+    setActiveFilter(chip);
+
+    if (prefersReducedMotion() || !cardsContainerRef.current) {
+      setRenderedFilter(chip);
+      return;
+    }
+
+    const cards = cardsContainerRef.current.querySelectorAll('article');
+    gsap.to(cards, {
+      opacity: 0,
+      y: 14,
+      scale: 0.98,
+      duration: 0.2,
+      stagger: 0.02,
+      ease: EASINGS.power2Out,
+      onComplete: () => {
+        setRenderedFilter(chip);
+      },
+    });
+  };
+
+  // Animate newly rendered cards in after filter changes
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+
+    if (prefersReducedMotion() || !cardsContainerRef.current) return;
+
+    const cards = cardsContainerRef.current.querySelectorAll('article');
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 28, scale: 0.97 },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.55,
+        stagger: 0.05,
+        ease: EASINGS.power3Out,
+      }
+    );
+  }, [renderedFilter]);
+
+  const handleCardMouseEnter = (e) => {
+    if (prefersReducedMotion()) return;
+    const card = e.currentTarget;
+    gsap.to(card, {
+      y: -8,
+      scale: 1.02,
+      duration: 0.35,
+      ease: EASINGS.power2Out,
+      overwrite: 'auto',
+    });
+  };
+
+  const handleCardMouseLeave = (e) => {
+    if (prefersReducedMotion()) return;
+    const card = e.currentTarget;
+    gsap.to(card, {
+      y: 0,
+      scale: 1,
+      duration: 0.35,
+      ease: EASINGS.power2Out,
+      overwrite: 'auto',
+    });
+  };
+
   return (
-    <section id="work" className="content-section" aria-labelledby="work-heading">
+    <section id="work" ref={sectionRef} className="content-section" aria-labelledby="work-heading">
       <div className="section-container">
         <SectionHeading id="work-heading" eyebrow={eyebrow} title={h2} />
 
         {/* Filter Chips */}
-        <div className="filter-chips-bar" role="tablist" aria-label="Filter client projects" data-reveal>
+        <div ref={chipsRef} className="filter-chips-bar" role="tablist" aria-label="Filter client projects">
           {filterChips.map((chip) => {
             const isSelected = activeFilter === chip;
             return (
@@ -146,20 +201,17 @@ export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
         </div>
 
         {/* Projects Grid Container with Scroll Reveal */}
-        <div
-          ref={wrapperRef}
-          className={`work-grid-wrapper ${isRevealed ? 'is-revealed' : ''}`}
-          data-reveal
-        >
+        <div className="work-grid-wrapper is-revealed">
           <div
-            className={`grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 transition-opacity duration-200 ease-out ${
-              isFading ? 'opacity-20' : 'opacity-100'
-            }`}
+            ref={cardsContainerRef}
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
           >
             {filteredProjects.map((project, idx) => (
               <article
                 key={project.id}
                 onClick={() => onOpenCaseStudy(project)}
+                onMouseEnter={handleCardMouseEnter}
+                onMouseLeave={handleCardMouseLeave}
                 tabIndex={0}
                 role="button"
                 aria-label={`View case study: ${project.name} for ${project.client}`}
@@ -169,15 +221,15 @@ export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
                     onOpenCaseStudy(project);
                   }
                 }}
-                className="group relative flex h-[370px] cursor-pointer flex-col justify-between overflow-hidden rounded-2xl bg-[#050507] p-7 text-white shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-2xl border border-white/10"
+                className="group relative flex h-[370px] cursor-pointer flex-col justify-between overflow-hidden rounded-2xl bg-[#050507] p-7 text-white shadow-xl border border-white/10"
                 style={{
-                  backgroundImage: isRevealed ? `url(${project.imageUrl})` : 'none',
+                  backgroundImage: `url(${project.imageUrl})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   '--delay-index': idx
                 }}
               >
-                {/* Gradient Overlay matching ArticleCard style */}
+                {/* Gradient Overlay */}
                 <div
                   className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-90"
                   style={{
@@ -222,7 +274,7 @@ export default function WorkSection({ onOpenCaseStudy, onStartProject }) {
         </div>
 
         {/* End of Section Ghost Button */}
-        <div className="work-footer-action" data-reveal>
+        <div ref={footerBtnRef} className="work-footer-action">
           <button
             type="button"
             className="pill-btn pill-btn-ghost"

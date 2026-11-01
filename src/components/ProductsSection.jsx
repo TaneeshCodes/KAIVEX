@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import SectionHeading from './SectionHeading';
 import { PRODUCTS_DATA } from '../content';
+import { gsap, ScrollTrigger, EASINGS, prefersReducedMotion } from '../lib/gsap';
 
 function ProductMockup({ type, hue }) {
   if (type === 'kaivex-crm') {
@@ -94,15 +95,140 @@ function ProductMockup({ type, hue }) {
 export default function ProductsSection({ onRequestDemo, onCustomTalk }) {
   const { eyebrow, h2, products, customCard } = PRODUCTS_DATA;
 
+  const sectionRef = useRef(null);
+  const gridRef = useRef(null);
+  const customCardRef = useRef(null);
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+
+    if (prefersReducedMotion()) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      // 1. Staggered reveal for product cards
+      if (gridRef.current) {
+        const cards = gridRef.current.querySelectorAll('.product-card');
+        gsap.fromTo(
+          cards,
+          { opacity: 0, y: 50, scale: 0.97 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.95,
+            stagger: 0.16,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: gridRef.current,
+              start: 'top 82%',
+              once: true,
+            },
+          }
+        );
+
+        // 2. Animated UI inside mockups
+        // CRM mockup deal cards entrance
+        const dealCards = gridRef.current.querySelectorAll('.mockup-deal-card');
+        if (dealCards.length > 0) {
+          gsap.fromTo(
+            dealCards,
+            { x: -22, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.75,
+              stagger: 0.12,
+              ease: EASINGS.power3Out,
+              scrollTrigger: {
+                trigger: gridRef.current,
+                start: 'top 78%',
+                once: true,
+              },
+            }
+          );
+        }
+
+        // Insights mockup chart bars entrance (rising smoothly from base)
+        const chartBars = gridRef.current.querySelectorAll('.chart-bar');
+        if (chartBars.length > 0) {
+          gsap.fromTo(
+            chartBars,
+            { scaleY: 0, transformOrigin: 'bottom' },
+            {
+              scaleY: 1,
+              duration: 0.85,
+              stagger: 0.08,
+              ease: EASINGS.backOutSoft,
+              scrollTrigger: {
+                trigger: gridRef.current,
+                start: 'top 78%',
+                once: true,
+              },
+            }
+          );
+        }
+      }
+
+      // 3. Custom Card reveal
+      if (customCardRef.current) {
+        gsap.fromTo(
+          customCardRef.current,
+          { opacity: 0, y: 35, scale: 0.98 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.85,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: customCardRef.current,
+              start: 'top 88%',
+              once: true,
+            },
+          }
+        );
+      }
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  const handleCardMouseEnter = (e) => {
+    if (prefersReducedMotion()) return;
+    gsap.to(e.currentTarget, {
+      y: -6,
+      duration: 0.35,
+      ease: EASINGS.power2Out,
+      overwrite: 'auto',
+    });
+  };
+
+  const handleCardMouseLeave = (e) => {
+    if (prefersReducedMotion()) return;
+    gsap.to(e.currentTarget, {
+      y: 0,
+      duration: 0.35,
+      ease: EASINGS.power2Out,
+      overwrite: 'auto',
+    });
+  };
+
   return (
-    <section id="products" className="content-section" aria-labelledby="products-heading">
+    <section id="products" ref={sectionRef} className="content-section" aria-labelledby="products-heading">
       <div className="section-container">
         <SectionHeading id="products-heading" eyebrow={eyebrow} title={h2} />
 
         {/* 2-Column Product Cards */}
-        <div className="products-grid" data-reveal>
+        <div ref={gridRef} className="products-grid">
           {products.map((prod) => (
-            <article key={prod.id} className="product-card">
+            <article
+              key={prod.id}
+              className="product-card"
+              onMouseEnter={handleCardMouseEnter}
+              onMouseLeave={handleCardMouseLeave}
+            >
               {/* Product Mockup Stage */}
               <ProductMockup type={prod.id} hue={prod.hue} />
 
@@ -166,7 +292,7 @@ export default function ProductsSection({ onRequestDemo, onCustomTalk }) {
         </div>
 
         {/* Full-width "Need something custom?" Card */}
-        <div className="custom-product-card" data-reveal>
+        <div ref={customCardRef} className="custom-product-card">
           <div className="custom-card-left">
             <h3 className="custom-card-title">{customCard.title}</h3>
             <p className="custom-card-desc">{customCard.description}</p>

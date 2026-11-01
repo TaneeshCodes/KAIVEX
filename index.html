@@ -8,7 +8,9 @@
     <link rel="icon" type="image/webp" href="/favicon.webp" />
     <link rel="canonical" href="https://kaivex.com/" />
     <meta name="theme-color" content="#05060a" />
-    <!-- Self-hosted font preloads for zero-CLS, instant first paint -->
+    <!-- Self-hosted font & intro video preloads for zero-latency start -->
+    <link rel="preload" href="/intro-poster.webp" as="image" type="image/webp" fetchpriority="high" />
+    <link rel="preload" href="/intro-video.mp4" as="video" type="video/mp4" fetchpriority="high" />
     <link rel="preload" href="/fonts/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
     <script type="application/ld+json">

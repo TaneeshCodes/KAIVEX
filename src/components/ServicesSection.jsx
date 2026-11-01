@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SERVICES_DATA } from '../content';
+import { gsap, ScrollTrigger, EASINGS, prefersReducedMotion } from '../lib/gsap';
 
 function FallbackIcon({ id }) {
   const strokeProps = {
@@ -71,36 +72,176 @@ export default function ServicesSection({ onOpenService, onStartProject }) {
   const { eyebrow, h2, paragraph, ctaButton, services } = SERVICES_DATA;
   const [hoveredCard, setHoveredCard] = useState(null);
   const [failedImages, setFailedImages] = useState({});
-  const [isRevealed, setIsRevealed] = useState(false);
 
   const sectionRef = useRef(null);
+  const headerRef = useRef(null);
+  const gridRef = useRef(null);
   const cardRefs = useRef([]);
+  const twinkleRef = useRef(null);
 
-  // Scroll reveal observer
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
 
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setIsRevealed(true);
+    if (prefersReducedMotion()) {
+      gsap.set(['.svc-eyebrow', '.svc-title', '.svc-desc', '.svc-cta-wrapper', cardRefs.current], {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+      });
       return;
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsRevealed(true);
-            observer.disconnect();
-          }
+    const ctx = gsap.context(() => {
+      // 1. Continuous organic ambient floating for twinkle glow dots
+      if (twinkleRef.current) {
+        const dots = twinkleRef.current.querySelectorAll('.svc-dot');
+        dots.forEach((dot, i) => {
+          gsap.to(dot, {
+            y: (i % 2 === 0 ? '-=10' : '+=10'),
+            x: (i % 3 === 0 ? '+=8' : '-=6'),
+            scale: 1.25,
+            opacity: 0.9,
+            duration: 3 + (i * 0.35),
+            repeat: -1,
+            yoyo: true,
+            ease: EASINGS.sineInOut,
+            delay: i * 0.25,
+          });
         });
-      },
-      { threshold: 0.1 }
-    );
+      }
 
-    observer.observe(el);
-    return () => observer.disconnect();
+      // 2. Section Header entrance timeline
+      const headerTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: headerRef.current,
+          start: 'top 85%',
+          once: true,
+        },
+      });
+
+      headerTl
+        .fromTo(
+          '.svc-eyebrow',
+          { opacity: 0, y: 18, filter: 'blur(3px)' },
+          { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.75, ease: EASINGS.power3Out }
+        )
+        .fromTo(
+          '.svc-title',
+          { opacity: 0, y: 28, filter: 'blur(4px)' },
+          { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.9, ease: EASINGS.power3Out },
+          '-=0.55'
+        )
+        .fromTo(
+          '.svc-desc',
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.8, ease: EASINGS.power3Out },
+          '-=0.6'
+        )
+        .fromTo(
+          '.svc-cta-wrapper',
+          { opacity: 0, y: 16, scale: 0.96 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: EASINGS.backOutSoft },
+          '-=0.45'
+        );
+
+      // 3. 3x2 Capability cards staggered entrance
+      const validCards = cardRefs.current.filter(Boolean);
+      if (validCards.length > 0) {
+        gsap.fromTo(
+          validCards,
+          { opacity: 0, y: 50, scale: 0.96 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.95,
+            stagger: 0.1,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: gridRef.current,
+              start: 'top 82%',
+              once: true,
+            },
+          }
+        );
+      }
+    }, sectionRef);
+
+    return () => ctx.revert();
   }, []);
+
+  const handleCardMouseEnter = (idx) => {
+    setHoveredCard(idx);
+    if (prefersReducedMotion()) return;
+
+    const cardEl = cardRefs.current[idx];
+    if (!cardEl) return;
+
+    gsap.to(cardEl, {
+      y: -8,
+      scale: 1.015,
+      duration: 0.35,
+      ease: EASINGS.power2Out,
+      overwrite: 'auto',
+    });
+
+    const imgEl = cardEl.querySelector('.svc-art-img');
+    if (imgEl) {
+      gsap.to(imgEl, {
+        scale: 1.06,
+        duration: 0.45,
+        ease: EASINGS.power2Out,
+        overwrite: 'auto',
+      });
+    }
+
+    const arrowEl = cardEl.querySelector('.svc-arrow');
+    if (arrowEl) {
+      gsap.to(arrowEl, {
+        x: 5,
+        duration: 0.25,
+        ease: EASINGS.power2Out,
+        overwrite: 'auto',
+      });
+    }
+  };
+
+  const handleCardMouseLeave = (idx) => {
+    setHoveredCard(null);
+    if (prefersReducedMotion()) return;
+
+    const cardEl = cardRefs.current[idx];
+    if (!cardEl) return;
+
+    gsap.to(cardEl, {
+      y: 0,
+      scale: 1,
+      duration: 0.4,
+      ease: EASINGS.power2Out,
+      overwrite: 'auto',
+    });
+
+    const imgEl = cardEl.querySelector('.svc-art-img');
+    if (imgEl) {
+      gsap.to(imgEl, {
+        scale: 1,
+        duration: 0.45,
+        ease: EASINGS.power2Out,
+        overwrite: 'auto',
+      });
+    }
+
+    const arrowEl = cardEl.querySelector('.svc-arrow');
+    if (arrowEl) {
+      gsap.to(arrowEl, {
+        x: 0,
+        duration: 0.25,
+        ease: EASINGS.power2Out,
+        overwrite: 'auto',
+      });
+    }
+  };
 
   const handleImageError = (id) => {
     setFailedImages((prev) => ({ ...prev, [id]: true }));
@@ -138,54 +279,51 @@ export default function ServicesSection({ onOpenService, onStartProject }) {
     <section
       id="services"
       ref={sectionRef}
-      className={`services-section ${isRevealed ? 'is-revealed' : ''}`}
+      className="services-section is-revealed"
       aria-labelledby="svc-title"
     >
       {/* Background Dot Grid */}
       <div className="svc-dot-grid" aria-hidden="true" />
 
-      {/* Twinkling Glow Dots in Lower Area */}
-      <div className="svc-twinkle-container" aria-hidden="true">
-        <span className="svc-dot svc-dot-blue" style={{ top: '65%', left: '8%', animationDelay: '0s' }} />
-        <span className="svc-dot svc-dot-violet" style={{ top: '75%', left: '18%', animationDelay: '1.2s' }} />
-        <span className="svc-dot svc-dot-blue" style={{ top: '82%', left: '30%', animationDelay: '2.5s' }} />
-        <span className="svc-dot svc-dot-violet" style={{ top: '68%', left: '42%', animationDelay: '3.8s' }} />
-        <span className="svc-dot svc-dot-blue" style={{ top: '88%', left: '50%', animationDelay: '0.8s' }} />
-        <span className="svc-dot svc-dot-violet" style={{ top: '72%', left: '62%', animationDelay: '4.5s' }} />
-        <span className="svc-dot svc-dot-blue" style={{ top: '84%', left: '74%', animationDelay: '2.1s' }} />
-        <span className="svc-dot svc-dot-violet" style={{ top: '69%', left: '85%', animationDelay: '5.2s' }} />
-        <span className="svc-dot svc-dot-blue" style={{ top: '80%', left: '94%', animationDelay: '3.1s' }} />
+      {/* Twinkling Glow Dots with continuous GSAP ambient motion */}
+      <div ref={twinkleRef} className="svc-twinkle-container" aria-hidden="true">
+        <span className="svc-dot svc-dot-blue" style={{ top: '65%', left: '8%' }} />
+        <span className="svc-dot svc-dot-violet" style={{ top: '75%', left: '18%' }} />
+        <span className="svc-dot svc-dot-blue" style={{ top: '82%', left: '30%' }} />
+        <span className="svc-dot svc-dot-violet" style={{ top: '68%', left: '42%' }} />
+        <span className="svc-dot svc-dot-blue" style={{ top: '88%', left: '50%' }} />
+        <span className="svc-dot svc-dot-violet" style={{ top: '72%', left: '62%' }} />
+        <span className="svc-dot svc-dot-blue" style={{ top: '84%', left: '74%' }} />
+        <span className="svc-dot svc-dot-violet" style={{ top: '69%', left: '85%' }} />
+        <span className="svc-dot svc-dot-blue" style={{ top: '80%', left: '94%' }} />
       </div>
 
       {/* Soft Blue Radial Glow Behind Cards */}
       <div className="svc-cards-radial-glow" aria-hidden="true" />
 
       <div className="svc-content-container">
-        {/* Eyebrow */}
-        <p className="svc-eyebrow">{eyebrow}</p>
-
-        {/* H2 Title */}
-        <h2 id="svc-title" className="svc-title">
-          {h2}
-        </h2>
-
-        {/* Paragraph */}
-        <p className="svc-desc">{paragraph}</p>
-
-        {/* White Pill Button */}
-        <div className="svc-cta-wrapper">
-          <button
-            type="button"
-            className="svc-cta-btn"
-            onClick={() => onStartProject?.()}
-            data-open
-          >
-            {ctaButton}
-          </button>
+        {/* Header Zone */}
+        <div ref={headerRef} className="svc-header-zone">
+          <p className="svc-eyebrow">{eyebrow}</p>
+          <h2 id="svc-title" className="svc-title">
+            {h2}
+          </h2>
+          <p className="svc-desc">{paragraph}</p>
+          <div className="svc-cta-wrapper">
+            <button
+              type="button"
+              className="svc-cta-btn"
+              onClick={() => onStartProject?.()}
+              data-open
+            >
+              {ctaButton}
+            </button>
+          </div>
         </div>
 
-        {/* 3x2 Cards Grid (3 in first row, 3 in second row) */}
+        {/* 3x2 Cards Grid */}
         <div
+          ref={gridRef}
           className={`svc-grid-3x2 ${hoveredCard !== null ? 'has-hovered-child' : ''}`}
           role="region"
           aria-label="Services capabilities grid"
@@ -208,8 +346,8 @@ export default function ServicesSection({ onOpenService, onStartProject }) {
                 }}
                 onClick={() => onOpenService?.(item.serviceKey)}
                 onKeyDown={(e) => handleCardKeyDown(e, idx, item)}
-                onMouseEnter={() => setHoveredCard(idx)}
-                onMouseLeave={() => setHoveredCard(null)}
+                onMouseEnter={() => handleCardMouseEnter(idx)}
+                onMouseLeave={() => handleCardMouseLeave(idx)}
                 data-service={item.serviceKey}
               >
                 {/* Subtle top arch highlight line */}
@@ -227,7 +365,7 @@ export default function ServicesSection({ onOpenService, onStartProject }) {
                   <p className="svc-card-descriptor">{item.descriptor}</p>
                 </div>
 
-                {/* 2. Illustration Zone: Centered with Ambient Glowing Spotlight */}
+                {/* 2. Illustration Zone */}
                 <div className="svc-card-art-zone">
                   <div className="svc-art-ambient-spotlight" aria-hidden="true" />
                   {!hasFailed ? (
@@ -251,7 +389,7 @@ export default function ServicesSection({ onOpenService, onStartProject }) {
                   )}
                 </div>
 
-                {/* 3. Footer Zone: Deliverables Bullets & Action Link */}
+                {/* 3. Footer Zone */}
                 <div className="svc-card-footer-zone">
                   <ul className="svc-bullet-list" aria-label={`Deliverables for ${item.title}`}>
                     {item.bullets.map((bullet, bIdx) => (

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import SectionHeading from './SectionHeading';
 import { CONTACT_DATA, CALENDAR_URL } from '../content';
+import { gsap, ScrollTrigger, EASINGS, prefersReducedMotion } from '../lib/gsap';
 
 function ChannelIcon({ type }) {
   const strokeProps = {
@@ -55,22 +56,165 @@ export default function ContactSection({ onOpenModal }) {
   const { eyebrow, h2, intro, channels, socialLinks, card, faq, faqSubtitle, faqContactEmail, readyBand, footer } = CONTACT_DATA;
   const [openFaqId, setOpenFaqId] = useState(null);
 
+  const sectionRef = useRef(null);
+  const mainGridRef = useRef(null);
+  const channelsRef = useRef(null);
+  const glassCardRef = useRef(null);
+  const faqRef = useRef(null);
+  const readyBandRef = useRef(null);
+  const footerRef = useRef(null);
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+
+    if (prefersReducedMotion()) {
+      return;
+    }
+
+    const ctx = gsap.context(() => {
+      // 1. Direct channels staggered slide-in
+      if (channelsRef.current) {
+        const rows = channelsRef.current.querySelectorAll('.channel-row');
+        gsap.fromTo(
+          rows,
+          { opacity: 0, x: -24 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.75,
+            stagger: 0.08,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: channelsRef.current,
+              start: 'top 85%',
+              once: true,
+            },
+          }
+        );
+      }
+
+      // 2. Glass card entrance
+      if (glassCardRef.current) {
+        gsap.fromTo(
+          glassCardRef.current,
+          { opacity: 0, y: 35, scale: 0.95 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.85,
+            ease: EASINGS.backOutSoft,
+            scrollTrigger: {
+              trigger: glassCardRef.current,
+              start: 'top 85%',
+              once: true,
+            },
+          }
+        );
+      }
+
+      // 3. FAQ Section entrance
+      if (faqRef.current) {
+        const header = faqRef.current.querySelector('.faq-header-centered');
+        const items = faqRef.current.querySelectorAll('.faq-clean-item');
+
+        if (header) {
+          gsap.fromTo(
+            header,
+            { opacity: 0, y: 28 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.85,
+              ease: EASINGS.power3Out,
+              scrollTrigger: {
+                trigger: header,
+                start: 'top 88%',
+                once: true,
+              },
+            }
+          );
+        }
+
+        if (items.length > 0) {
+          gsap.fromTo(
+            items,
+            { opacity: 0, y: 22 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              stagger: 0.06,
+              ease: EASINGS.power3Out,
+              scrollTrigger: {
+                trigger: items[0],
+                start: 'top 88%',
+                once: true,
+              },
+            }
+          );
+        }
+      }
+
+      // 4. Ready Band CTA reveal
+      if (readyBandRef.current) {
+        gsap.fromTo(
+          readyBandRef.current,
+          { opacity: 0, y: 35, scale: 0.96 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.85,
+            ease: EASINGS.backOutSoft,
+            scrollTrigger: {
+              trigger: readyBandRef.current,
+              start: 'top 88%',
+              once: true,
+            },
+          }
+        );
+      }
+
+      // 5. Site Footer subtle fade-in
+      if (footerRef.current) {
+        gsap.fromTo(
+          footerRef.current,
+          { opacity: 0, y: 15 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.75,
+            ease: EASINGS.power3Out,
+            scrollTrigger: {
+              trigger: footerRef.current,
+              start: 'top 95%',
+              once: true,
+            },
+          }
+        );
+      }
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   const toggleFaq = (id) => {
     setOpenFaqId((prev) => (prev === id ? null : id));
   };
 
   return (
-    <section id="contact" className="content-section contact-section" aria-labelledby="contact-heading">
+    <section id="contact" ref={sectionRef} className="content-section contact-section" aria-labelledby="contact-heading">
       <div className="section-container">
         <SectionHeading id="contact-heading" eyebrow={eyebrow} title={h2} />
 
         {/* 2-Column Direct Channels & Glass Card */}
-        <div className="contact-main-grid" data-reveal>
+        <div ref={mainGridRef} className="contact-main-grid">
           {/* Left Column: Direct Channels */}
           <div className="contact-channels-column">
             <p className="contact-intro-line">{intro}</p>
 
-            <div className="direct-channels-list">
+            <div ref={channelsRef} className="direct-channels-list">
               {channels.map((ch) => (
                 <div key={ch.id} className="channel-row">
                   <div className="channel-icon-circle">
@@ -90,7 +234,7 @@ export default function ContactSection({ onOpenModal }) {
               ))}
             </div>
 
-            {/* Optional "Book a call" button if CALENDAR_URL is non-empty */}
+            {/* Book a call button */}
             {CALENDAR_URL && (
               <div className="book-call-wrap">
                 <a
@@ -104,7 +248,7 @@ export default function ContactSection({ onOpenModal }) {
               </div>
             )}
 
-            {/* Social Links if present */}
+            {/* Social Links */}
             {socialLinks && socialLinks.length > 0 && (
               <div className="contact-social-row" aria-label="Social profiles">
                 {socialLinks.map((item, sIdx) => (
@@ -124,7 +268,7 @@ export default function ContactSection({ onOpenModal }) {
 
           {/* Right Column: Glass Card with CTA */}
           <div className="contact-card-column">
-            <div className="contact-glass-card">
+            <div ref={glassCardRef} className="contact-glass-card">
               <h3 className="contact-card-headline">{card.headline}</h3>
               <p className="contact-card-sentence">{card.sentence}</p>
 
@@ -139,8 +283,8 @@ export default function ContactSection({ onOpenModal }) {
           </div>
         </div>
 
-        {/* FAQ Accordion matching reference image */}
-        <div className="faq-section-clean" data-reveal>
+        {/* FAQ Accordion */}
+        <div ref={faqRef} className="faq-section-clean">
           <div className="faq-header-centered">
             <h2 className="faq-centered-title">
               Frequently asked<br />questions
@@ -190,7 +334,7 @@ export default function ContactSection({ onOpenModal }) {
         </div>
 
         {/* Final CTA Band */}
-        <div className="ready-band" data-reveal>
+        <div ref={readyBandRef} className="ready-band">
           <h2 className="ready-band-h2">{readyBand.h2}</h2>
           <button
             type="button"
@@ -202,7 +346,7 @@ export default function ContactSection({ onOpenModal }) {
         </div>
 
         {/* Footer */}
-        <footer className="kaivex-site-footer" role="contentinfo">
+        <footer ref={footerRef} className="kaivex-site-footer" role="contentinfo">
           <div className="footer-left">
             <span className="footer-copyright">{footer.copyright}</span>
           </div>

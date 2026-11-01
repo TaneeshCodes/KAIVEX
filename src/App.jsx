@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
-import { GetStartedButton, PredictiveArcCanvas, AnimatedTopDock } from "@designcodeio/threeui";
+import { GetStartedButton, PredictiveArcCanvas, AnimatedTopDock, TextAnimationCollection } from "@designcodeio/threeui";
 import "@designcodeio/threeui/style.css";
-import ReelCarousel from './components/ReelCarousel';
+import InfiniteMarqueeWall from './components/InfiniteMarqueeWall';
+import CinemaHeroSection from './components/CinemaHeroSection';
 import IntroAnimation from './components/IntroAnimation';
 import StickyNavbar from './components/StickyNavbar';
 import { usePerformanceTier } from './hooks/usePerformanceTier';
+import { gsap, EASINGS, prefersReducedMotion } from './lib/gsap';
 
 const ServicesSection = lazy(() => import('./components/ServicesSection'));
 const WorkSection = lazy(() => import('./components/WorkSection'));
@@ -36,7 +38,6 @@ export default function App() {
       return false;
     }
   });
-
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState('project');
   const [initialService, setInitialService] = useState(null);
@@ -76,49 +77,37 @@ export default function App() {
     }
   }, []);
 
-  // Trigger page elements entrance animation (opacity & transform only, zero blur churn)
+  // Trigger page elements entrance animation via GSAP Master Timeline
   const triggerEntrance = () => {
-    const E = 'cubic-bezier(.2,.8,.2,1)';
-    const go = (el, kf, delay, dur = 750) => {
-      if (!el) return;
-      el.style.willChange = 'transform, opacity';
-      const anim = el.animate(kf, { duration: dur, delay, easing: E, fill: 'backwards' });
-      anim.onfinish = () => {
-        el.style.willChange = 'auto';
-      };
-    };
+    if (prefersReducedMotion()) return;
 
-    const topEl = document.querySelector('.top');
-    const h1Spans = document.querySelectorAll('#h1 span');
-    const subEl = document.getElementById('sub');
-    const rowwrapEl = document.getElementById('rowwrap');
-    const ringEl = document.getElementById('ring');
-    const paths = document.querySelectorAll('svg.ink path');
-    const n1El = document.getElementById('n1');
-    const n2El = document.getElementById('n2');
+    const tl = gsap.timeline({ defaults: { ease: EASINGS.power3Out } });
 
-    go(topEl, [{ opacity: 0, transform: 'translateY(-24px)' }, { opacity: 1, transform: 'none' }], 0);
-    h1Spans.forEach((s, i) =>
-      go(
-        s,
-        [
-          { opacity: 0, transform: 'translateY(40px)' },
-          { opacity: 1, transform: 'none' }
-        ],
-        180 + i * 140,
-        900
-      )
-    );
-    go(subEl, [{ opacity: 0, transform: 'translateY(20px)' }, { opacity: 1, transform: 'none' }], 550);
-    go(rowwrapEl, [{ opacity: 0, transform: 'translateY(110px)' }, { opacity: 1, transform: 'none' }], 450, 1100);
-    go(ringEl, [{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'none' }], 850, 650);
+    const topBar = document.querySelector('.hero-nav-bar') || document.querySelector('.cinema-top-nav') || document.querySelector('.imw-nav-bar');
+    const headline = document.querySelector('.cinema-headline-text') || document.querySelector('.hero-shader-frame') || document.querySelector('.imw-headline');
+    const carousel = document.querySelector('.cinema-carousel-viewport') || document.querySelector('.imw-plane');
+    const manifesto = document.querySelector('.cinema-manifesto-text') || document.querySelector('.imw-subheadline');
+    const stepper = document.querySelector('.cinema-stepper-wrap');
+    const hud = document.querySelector('.cinema-bottom-hud');
 
-    paths.forEach((p, i) =>
-      go(p, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], 1050 + i * 180, 700)
-    );
-
-    go(n1El, [{ opacity: 0 }, { opacity: 1 }], 1350, 600);
-    go(n2El, [{ opacity: 0 }, { opacity: 1 }], 1550, 600);
+    if (topBar) {
+      tl.fromTo(topBar, { opacity: 0, y: -24 }, { opacity: 1, y: 0, duration: 0.8 }, 0);
+    }
+    if (headline) {
+      tl.fromTo(headline, { opacity: 0, y: 32, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.95 }, 0.15);
+    }
+    if (carousel) {
+      tl.fromTo(carousel, { opacity: 0, scale: 0.92, y: 36 }, { opacity: 1, scale: 1, y: 0, duration: 1.15, ease: EASINGS.power2Out }, 0.25);
+    }
+    if (manifesto) {
+      tl.fromTo(manifesto, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8 }, 0.45);
+    }
+    if (stepper) {
+      tl.fromTo(stepper, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6 }, 0.55);
+    }
+    if (hud) {
+      tl.fromTo(hud, { opacity: 0 }, { opacity: 1, duration: 0.8 }, 0.65);
+    }
   };
 
   const handleTransitionStart = () => {
@@ -281,143 +270,12 @@ export default function App() {
         />
       )}
 
-      {/* Hero Section Container */}
+      {/* Hero Section Container with 3D Curved Cinema Carousel */}
       <section id="hero" className="hero-section">
-        <main
-          className="frame"
-          id="frame"
-          ref={frameRef}
-          inert={introActive && !introTransitioned ? '' : undefined}
-        >
-          <header className="top">
-            <a
-              className="a logo"
-              href="#hero"
-              style={{ '--x': 37, '--y': 24 }}
-              aria-label="Kaivex Home"
-              onClick={(e) => {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              title="Kaivex Home"
-            >
-              <img
-                ref={targetLogoRef}
-                src="/logo-icon.webp"
-                alt="Kaivex Icon"
-                className="logo-mark"
-                style={{
-                  opacity: logoDocked || !introActive ? 1 : 0,
-                  transition: 'opacity 0.25s ease-in',
-                }}
-              />
-              <img
-                src="/logo-text.webp"
-                alt="Kaivex"
-                className="logo-wordmark"
-                style={{
-                  opacity: logoDocked || !introActive ? 1 : 0,
-                  transition: 'opacity 0.4s ease-in 0.1s',
-                }}
-              />
-            </a>
-
-            {/* Centered ThreeUI AnimatedTopDock (Sable variant) */}
-            <div className="a nav-dock-wrap" style={{ '--x': 0, '--y': 22, '--w': '1440px' }}>
-              <AnimatedTopDock
-                variant="sable"
-                proximity={140}
-                spring={0.19}
-                damping={0.70}
-                widthGrowth={20}
-                heightGrowth={18}
-                drop={4}
-                onItemClick={(id) => {
-                  if (id === 'contact' || id === 'about' || id === 'services' || id === 'work' || id === 'products') {
-                    const el = document.getElementById(id);
-                    if (el) {
-                      el.scrollIntoView({ behavior: 'smooth' });
-                      return;
-                    }
-                  }
-                  if (id === 'home') {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  } else {
-                    openProjectModal('project');
-                  }
-                }}
-              />
-            </div>
-          </header>
-
-          {/* Tiered 3D Curved Perspective Carousel with Video Reels */}
-          <ReelCarousel
-            frameRef={frameRef}
-            tier={tier}
-            active={carouselActive}
-            onFrameDuration={recordFrame}
-          />
-
-          {/* Hero Content */}
-          <h1 className="a" id="h1" style={{ '--x': 0, '--y': 160, '--w': '1440px' }}>
-            <span>Your Next Big Thing.</span>
-            <span>Our Next Build.</span>
-          </h1>
-
-          <p className="a sub" id="sub" style={{ '--x': 0, '--y': 388, '--w': '1440px' }}>
-            No idea too ambitious.
-          </p>
-
-          {/* Hand-drawn ink SVG arrows and annotations */}
-          <svg className="ink" viewBox="0 0 1440 1080" aria-hidden="true">
-            <g className="slashes">
-              <path pathLength="1" d="M268 421L289 380" />
-              <path pathLength="1" d="M291 425L313 380" />
-            </g>
-            {/* Arrow pointing to "Built to scale" note */}
-            <path className="beseen orange-stroke" pathLength="1" d="M1252 410C1344 420 1388 484 1352 548" />
-            <path className="beseen orange-stroke" pathLength="1" d="M1334 532L1352 549L1367 530" />
-            {/* Arrow pointing to "Let's talk" note */}
-            <path className="zero-arrow orange-stroke" pathLength="1" d="M606 1004C630 1010 648 998 648 982" />
-            <path className="zero-arrow orange-stroke" pathLength="1" d="M640 991L648 981L657 989" />
-          </svg>
-
-          {/* Note 1: "Built to scale" in vibrant logo orange */}
-          <div
-            className="a note beseen orange-note"
-            id="n1"
-            style={{ '--x': 1212, '--y': 310, transform: 'rotate(16deg)', cursor: 'pointer' }}
-            onClick={() => openProjectModal('project')}
-            title="Click to learn about scaling"
-          >
-            Built to<br />scale
-          </div>
-
-          {/* Note 2: "Let's talk" in vibrant logo orange */}
-          <div
-            className="a note zero orange-note"
-            id="n2"
-            style={{ '--x': 521, '--y': 937, transform: 'rotate(24deg)', cursor: 'pointer' }}
-            onClick={() => openProjectModal('talk')}
-            title="Click to talk with us"
-          >
-            Let’s talk
-          </div>
-
-          {/* CTA: ThreeUI <GetStartedButton /> */}
-          <div className="a cta-wrap" id="ring" style={{ '--x': 0, '--y': 880, '--w': '1440px' }}>
-            <div
-              className="shader-frame cta-get-started-btn"
-              onClick={() => openProjectModal('project')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openProjectModal('project'); }}
-              role="button"
-              tabIndex={0}
-              title="Start Project"
-            >
-              <GetStartedButton />
-            </div>
-          </div>
-        </main>
+        <CinemaHeroSection
+          onOpenCaseStudy={(project) => setActiveCaseStudy(project)}
+          onOpenModal={(type, service, msg) => openProjectModal(type, service, msg)}
+        />
       </section>
 
       {/* Five New Content Sections in exact order with Suspense */}
