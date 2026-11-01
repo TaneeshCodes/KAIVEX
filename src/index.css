@@ -1478,7 +1478,7 @@ svg.ink path.orange-stroke {
     max-width: calc(100vw - 40px) !important;
   }
 
-  .shader-frame,
+  .shader-frame:not(.hero-shader-frame),
   .cta-get-started-btn,
   .form-shader-submit {
     width: 230px !important;

@@ -257,15 +257,21 @@ function CustomIntroEffect({
       tx.appendChild(sp); chars.push(sp);
     }`;
 
-    const replacementLoop = `    var chars=[], str=${JSON.stringify(effectiveText)};
-    for(var i=0;i<str.length;i++){
-      if(str[i]==='\\n'){
-        tx.appendChild(document.createElement('br'));
-        continue;
+    const lines = effectiveText.split("\n");
+    const replacementLoop = `    var chars=[], lines=${JSON.stringify(lines)};
+    for(var l=0; l<lines.length; l++){
+      var lineDiv = document.createElement('div');
+      lineDiv.className = 'intro-line';
+      lineDiv.style.display = 'block';
+      lineDiv.style.whiteSpace = 'nowrap';
+      var curStr = lines[l];
+      for(var i=0; i<curStr.length; i++){
+        var sp = document.createElement('span');
+        sp.textContent = curStr[i] === ' ' ? '\\u00a0' : curStr[i];
+        lineDiv.appendChild(sp);
+        chars.push(sp);
       }
-      var sp=document.createElement('span');
-      sp.textContent=str[i]===' '?'\\u00a0':str[i];
-      tx.appendChild(sp); chars.push(sp);
+      tx.appendChild(lineDiv);
     }`;
 
     if (src.includes(authoredLoop)) {
@@ -287,13 +293,23 @@ function CustomIntroEffect({
 
     src = src.replace(
       "var fs=fitPx('Creator Studio',678);",
-      `var fs=Math.min(84, fitPx(${JSON.stringify(longestLine)}, 1020, 900));`
+      `var fs = Math.min(92, fitPx(${JSON.stringify(longestLine)}, 1140, 900));`
     );
 
     // Dynamic auto-scale adaptation so font fits every screen width perfectly
     src = src.replace(
       "var k=Math.min((stage.clientWidth||W)/W,(stage.clientHeight||H)/H);",
-      "var k=Math.min(1.0, (stage.clientWidth||W)/W);"
+      "var k = Math.min(1.0, (stage.clientWidth || W) / W);"
+    );
+
+    // Wire internal seek to window.__seek and disable unconstrained multi-scene auto-loop
+    src = src.replace(
+      "var start=null, raf=0, playing=!reduce, held=false, at=0;",
+      "var start=null, raf=0, playing=false, held=false, at=0;"
+    );
+    src = src.replace(
+      "function seek(t){",
+      "window.__seek = seek; function seek(t){"
     );
 
     // Ensure stage and page backgrounds are transparent for difference overlay
@@ -309,14 +325,15 @@ body { position: relative !important; display: flex !important; align-items: cen
 [data-threeui-role="background"] { position: fixed !important; inset: 0 !important; width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; z-index: 0 !important; opacity: 1 !important; pointer-events: none !important; background: transparent !important; }
 #comp .scene:not(:first-child) { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 #comp .scene:first-child { display: block !important; visibility: visible !important; }
-#comp .scene:first-child .tx { font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important; line-height: 1.05 !important; white-space: normal !important; text-transform: uppercase !important; font-weight: 900 !important; letter-spacing: clamp(0.5px, 0.1vw, 2px) !important; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 255, 255, 0.08) !important; }
+#comp .scene:first-child .tx { font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important; line-height: 1.16 !important; white-space: nowrap !important; text-transform: uppercase !important; font-weight: 900 !important; letter-spacing: clamp(0.5px, 0.1vw, 2px) !important; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 255, 255, 0.08) !important; }
+#comp .scene:first-child .intro-line { display: block !important; white-space: nowrap !important; }
 </style>`;
 
     const focusScript = `<script data-threeui-focus>
 (function () {
   document.documentElement.dataset.sfMode = ${JSON.stringify(safeMode)};
   var isolated = false;
-  var isStarted = false;
+  var isStarted = ${startTrigger ? 'true' : 'false'};
   var isDone = false;
   try {
     if (window.frameElement && window.frameElement.getAttribute('data-start-trigger') === 'true') {
@@ -381,17 +398,17 @@ body { position: relative !important; display: flex !important; align-items: cen
         return;
       }
       if (introReducedMotion) {
-        window.__seek(${endTime});
+        window.__seek(1.1);
         isDone = true;
         return;
       }
       var time = (now - introStartedAt) / 1000;
       if (time >= ${endTime}) {
-        window.__seek(${endTime});
+        window.__seek(1.1);
         isDone = true;
         return; // Run once only: permanently hold at final assembled state
       }
-      window.__seek(time);
+      window.__seek(Math.min(1.1, time));
       requestAnimationFrame(renderIntroWordmark);
     }
     requestAnimationFrame(renderIntroWordmark);

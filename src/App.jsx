@@ -18,6 +18,9 @@ const ProjectModal = lazy(() => import('./components/ProjectModal'));
 export default function App() {
   const [introActive, setIntroActive] = useState(() => {
     try {
+      if (typeof window !== 'undefined' && window.location.search.includes('skipIntro')) {
+        return false;
+      }
       return !sessionStorage.getItem('kaivex_intro_seen');
     } catch (_) {
       return true;
@@ -25,6 +28,9 @@ export default function App() {
   });
   const [logoDocked, setLogoDocked] = useState(() => {
     try {
+      if (typeof window !== 'undefined' && window.location.search.includes('skipIntro')) {
+        return true;
+      }
       return !!sessionStorage.getItem('kaivex_intro_seen');
     } catch (_) {
       return false;
@@ -32,6 +38,9 @@ export default function App() {
   });
   const [introTransitioned, setIntroTransitioned] = useState(() => {
     try {
+      if (typeof window !== 'undefined' && window.location.search.includes('skipIntro')) {
+        return true;
+      }
       return !!sessionStorage.getItem('kaivex_intro_seen');
     } catch (_) {
       return false;

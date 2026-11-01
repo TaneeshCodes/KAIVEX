@@ -139,9 +139,9 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
 
   // Responsive stage measurements
   const [stageDimensions, setStageDimensions] = useState({
-    width: 1200,
-    radius: 940,
-    angleStep: 21,
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    radius: typeof window !== 'undefined' && window.innerWidth < 640 ? 370 : 940,
+    angleStep: typeof window !== 'undefined' && window.innerWidth < 640 ? 38 : 21,
   });
 
   const updateDimensions = useCallback(() => {
@@ -150,8 +150,8 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
     let r = 940;
     let angle = 21;
     if (w < 640) {
-      r = Math.min(420, Math.max(300, Math.round(w * 0.88)));
-      angle = 32;
+      r = Math.min(460, Math.max(340, Math.round(w * 0.95)));
+      angle = 38;
     } else if (w < 1024) {
       r = Math.min(740, Math.max(500, Math.round(w * 0.82)));
       angle = 25;
@@ -359,16 +359,32 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
               let diff = ((idx - offset) % N + N) % N;
               if (diff > N / 2) diff -= N;
 
-              const isVisible = Math.abs(diff) <= 3.4;
+              const isMobile = stageDimensions.width < 640;
+              const maxVisible = isMobile ? 2.2 : 3.4;
+              const isVisible = Math.abs(diff) <= maxVisible;
               if (!isVisible) return null;
 
               const rad = (diff * stageDimensions.angleStep * Math.PI) / 180;
-              const x = stageDimensions.radius * Math.sin(rad);
-              const z = stageDimensions.radius * (Math.cos(rad) - 1);
-              const rotY = diff * stageDimensions.angleStep;
-              const scale = Math.max(1 - Math.abs(diff) * 0.045, 0.72);
-              const opacity = Math.max(1 - Math.pow(Math.abs(diff) / 3.4, 2) * 0.85, 0.15);
-              const zIndex = Math.round(100 - Math.abs(diff) * 10);
+              let x = stageDimensions.radius * Math.sin(rad);
+              let z = stageDimensions.radius * (Math.cos(rad) - 1);
+              const rotY = diff * (isMobile ? stageDimensions.angleStep * 0.72 : stageDimensions.angleStep);
+
+              // On mobile, elevate center card and push adjacent cards back cleanly
+              if (isMobile) {
+                if (Math.abs(diff) < 0.5) {
+                  z += (1 - Math.abs(diff) * 2) * 28;
+                } else {
+                  z -= Math.min(36, Math.abs(diff) * 22);
+                }
+              }
+
+              const scale = isMobile
+                ? Math.max(1 - Math.abs(diff) * 0.16, 0.70)
+                : Math.max(1 - Math.abs(diff) * 0.045, 0.72);
+              const opacity = isMobile
+                ? Math.max(1 - Math.pow(Math.abs(diff) / maxVisible, 2) * 0.9, 0.2)
+                : Math.max(1 - Math.pow(Math.abs(diff) / maxVisible, 2) * 0.85, 0.15);
+              const zIndex = Math.round(100 - Math.abs(diff) * 15);
               const isCenter = Math.abs(diff) < 0.5;
 
               return (
@@ -586,25 +602,29 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
           filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 24px rgba(224, 67, 31, 0.22));
         }
 
-        /* Inner Media Wrap: Luxury Translucent Glass */
+        /* Inner Media Wrap: High-Contrast Opaque Matte Glass */
         .cinema-card-media-wrap {
           position: relative;
           width: 100%;
           height: 100%;
-          border-radius: 16px;
+          border-radius: 18px;
           overflow: hidden;
-          background: rgba(12, 13, 18, 0.75);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          box-shadow: 0 14px 32px rgba(0, 0, 0, 0.6);
+          background: #0d0f17;
+          background: linear-gradient(180deg, #161824 0%, #0c0d13 100%);
+          border: 1px solid rgba(255, 255, 255, 0.13);
+          box-shadow: 0 16px 38px rgba(0, 0, 0, 0.75);
           transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+
+        .cinema-card-box.is-center .cinema-card-media-wrap {
+          border-color: rgba(255, 255, 255, 0.28);
+          box-shadow: 0 22px 50px rgba(0, 0, 0, 0.9), 0 0 32px rgba(224, 67, 31, 0.25);
         }
 
         .cinema-card-box:hover .cinema-card-media-wrap {
           border-color: rgba(255, 255, 255, 0.35);
           transform: scale(1.025);
-          box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8), 0 0 30px rgba(224, 67, 31, 0.3);
+          box-shadow: 0 24px 50px rgba(0, 0, 0, 0.9), 0 0 35px rgba(224, 67, 31, 0.3);
         }
 
         .cinema-card-image {
@@ -735,12 +755,57 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
         }
 
         @media (max-width: 640px) {
+          .cinema-hero-root {
+            padding: 12px 14px 18px;
+            min-height: 100svh;
+            justify-content: space-between;
+          }
+          .hero-nav-bar {
+            padding: 4px 0 6px;
+          }
+          .cinema-hero-body {
+            gap: clamp(10px, 2vh, 18px);
+            margin: auto 0;
+            padding: 0;
+          }
+          .cinema-headline-wrap {
+            padding: 0 4px;
+          }
+          .cinema-headline-wrap .shader-frame,
+          .cinema-headline-wrap .hero-shader-frame {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: clamp(86px, 12vh, 115px) !important;
+          }
           .cinema-card-box {
-            width: clamp(190px, 54vw, 240px);
-            height: clamp(260px, 38vh, 340px);
+            width: clamp(260px, 75vw, 305px);
+            height: clamp(370px, 48vh, 430px);
           }
           .cinema-carousel-viewport {
-            height: clamp(270px, 40vh, 360px);
+            height: clamp(390px, 50vh, 450px);
+            perspective: 900px;
+          }
+          .cinema-card-content {
+            padding: 16px 14px;
+          }
+          .cinema-card-tag {
+            font-size: 10px;
+          }
+          .cinema-card-metric {
+            font-size: 9px;
+            padding: 2px 7px;
+          }
+          .cinema-card-title {
+            font-size: 17px;
+            line-height: 1.2;
+          }
+          .cinema-card-desc {
+            font-size: 11px;
+            line-height: 1.35;
+          }
+          .cinema-view-pill {
+            font-size: 10px;
+            padding: 4px 10px;
           }
         }
       `}</style>
