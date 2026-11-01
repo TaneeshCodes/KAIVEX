@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { TextAnimationCollection } from '@designcodeio/threeui';
+import '@designcodeio/threeui/style.css';
 import { WORK_DATA } from '../content';
 
 const NAV_ITEMS = [
@@ -148,11 +150,11 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
     let r = 940;
     let angle = 21;
     if (w < 640) {
-      r = 540;
-      angle = 29;
+      r = Math.min(420, Math.max(300, Math.round(w * 0.88)));
+      angle = 32;
     } else if (w < 1024) {
-      r = 740;
-      angle = 24;
+      r = Math.min(740, Math.max(500, Math.round(w * 0.82)));
+      angle = 25;
     }
     setStageDimensions({ width: w, radius: r, angleStep: angle });
   }, []);
@@ -276,10 +278,6 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
     }
   };
 
-  // Stepper calculations: 3..2..1..0..1..2..3
-  const stepperRatio = ((offset % 1) - 0.5) * 2;
-  const markerOffsetPercent = (stepperRatio * 18);
-
   return (
     <div
       ref={containerRef}
@@ -337,129 +335,99 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
         </div>
       </header>
 
-      {/* 2. Massive Display Headline */}
-      <div className="cinema-headline-wrap">
-        <h1 className="cinema-headline-text">
-          <span className="cinema-headline-row">YOUR NEXT BIG THING,</span>
-          <span className="cinema-headline-row">OUR NEXT BIG BUILD</span>
-        </h1>
-      </div>
+      {/* 2. Main Hero Stage: Headline + 3D Carousel evenly spaced */}
+      <div className="cinema-hero-body">
+        <div className="cinema-headline-wrap">
+          <h1 className="sr-only">YOUR NEXT BIG THING, OUR NEXT BIG BUILD</h1>
+          <div className="shader-frame hero-shader-frame">
+            <TextAnimationCollection
+              variant="threeui-intro"
+              mode="dark"
+              hue={0}
+              saturation={1.00}
+              brightness={1.00}
+              text={"YOUR NEXT BIG THING,\nOUR NEXT BIG BUILD"}
+            />
+          </div>
+        </div>
 
-      {/* 3. The 3D Cylindrical Curved Carousel of Project & Product Boxes */}
-      <div ref={stageRef} className="cinema-carousel-viewport">
-        <div className="cinema-carousel-cylinder">
-          {SHOWCASE_ITEMS.map((item, idx) => {
-            const N = SHOWCASE_ITEMS.length;
-            let diff = ((idx - offset) % N + N) % N;
-            if (diff > N / 2) diff -= N;
+        {/* The 3D Cylindrical Curved Carousel of Project & Product Boxes */}
+        <div ref={stageRef} className="cinema-carousel-viewport">
+          <div className="cinema-carousel-cylinder">
+            {SHOWCASE_ITEMS.map((item, idx) => {
+              const N = SHOWCASE_ITEMS.length;
+              let diff = ((idx - offset) % N + N) % N;
+              if (diff > N / 2) diff -= N;
 
-            const isVisible = Math.abs(diff) <= 3.4;
-            if (!isVisible) return null;
+              const isVisible = Math.abs(diff) <= 3.4;
+              if (!isVisible) return null;
 
-            const rad = (diff * stageDimensions.angleStep * Math.PI) / 180;
-            const x = stageDimensions.radius * Math.sin(rad);
-            const z = stageDimensions.radius * (Math.cos(rad) - 1);
-            const rotY = diff * stageDimensions.angleStep;
-            const scale = Math.max(1 - Math.abs(diff) * 0.045, 0.72);
-            const opacity = Math.max(1 - Math.pow(Math.abs(diff) / 3.4, 2) * 0.85, 0.15);
-            const zIndex = Math.round(100 - Math.abs(diff) * 10);
-            const isCenter = Math.abs(diff) < 0.5;
+              const rad = (diff * stageDimensions.angleStep * Math.PI) / 180;
+              const x = stageDimensions.radius * Math.sin(rad);
+              const z = stageDimensions.radius * (Math.cos(rad) - 1);
+              const rotY = diff * stageDimensions.angleStep;
+              const scale = Math.max(1 - Math.abs(diff) * 0.045, 0.72);
+              const opacity = Math.max(1 - Math.pow(Math.abs(diff) / 3.4, 2) * 0.85, 0.15);
+              const zIndex = Math.round(100 - Math.abs(diff) * 10);
+              const isCenter = Math.abs(diff) < 0.5;
 
-            return (
-              <div
-                key={item.id}
-                className={`cinema-card-box ${isCenter ? 'is-center' : ''}`}
-                style={{
-                  transform: `translate3d(calc(-50% + ${x.toFixed(1)}px), -50%, ${z.toFixed(1)}px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
-                  opacity: opacity.toFixed(3),
-                  zIndex,
-                }}
-                onClick={() => handleCardClick(item, diff)}
-                onMouseEnter={() => { isHoveredRef.current = true; }}
-                onMouseLeave={() => { isHoveredRef.current = false; }}
-                role="button"
-                tabIndex={0}
-                aria-label={`View ${item.title}: ${item.tag}`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCardClick(item, diff);
-                  }
-                }}
-              >
-                {/* Media Image / Poster */}
-                <div className="cinema-card-media-wrap">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="cinema-card-image"
-                    loading="eager"
-                    decoding="async"
-                  />
+              return (
+                <div
+                  key={item.id}
+                  className={`cinema-card-box ${isCenter ? 'is-center' : ''}`}
+                  style={{
+                    transform: `translate3d(calc(-50% + ${x.toFixed(1)}px), -50%, ${z.toFixed(1)}px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
+                    opacity: opacity.toFixed(3),
+                    zIndex,
+                  }}
+                  onClick={() => handleCardClick(item, diff)}
+                  onMouseEnter={() => { isHoveredRef.current = true; }}
+                  onMouseLeave={() => { isHoveredRef.current = false; }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${item.title}: ${item.tag}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCardClick(item, diff);
+                    }
+                  }}
+                >
+                  {/* Media Image / Poster */}
+                  <div className="cinema-card-media-wrap">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="cinema-card-image"
+                      loading="eager"
+                      decoding="async"
+                    />
 
-                  {/* Dark Vignette Overlay */}
-                  <div className="cinema-card-vignette" />
+                    {/* Dark Vignette Overlay */}
+                    <div className="cinema-card-vignette" />
 
-                  {/* Card Content Overlay */}
-                  <div className="cinema-card-content">
-                    <div className="cinema-card-header">
-                      <span className="cinema-card-tag">{item.tag}</span>
-                      <span className="cinema-card-metric">{item.metric}</span>
-                    </div>
+                    {/* Card Content Overlay */}
+                    <div className="cinema-card-content">
+                      <div className="cinema-card-header">
+                        <span className="cinema-card-tag">{item.tag}</span>
+                        <span className="cinema-card-metric">{item.metric}</span>
+                      </div>
 
-                    <div className="cinema-card-footer">
-                      <h3 className="cinema-card-title">{item.title}</h3>
-                      <p className="cinema-card-desc">{item.description}</p>
-                      <div className="cinema-card-action-bar">
-                        <span className="cinema-view-pill">
-                          EXPLORE <span className="arrow" aria-hidden="true">→</span>
-                        </span>
+                      <div className="cinema-card-footer">
+                        <h3 className="cinema-card-title">{item.title}</h3>
+                        <p className="cinema-card-desc">{item.description}</p>
+                        <div className="cinema-card-action-bar">
+                          <span className="cinema-view-pill">
+                            EXPLORE <span className="arrow" aria-hidden="true">→</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 4. Editorial Manifesto / Description below the carousel */}
-      <div className="cinema-manifesto-wrap">
-        <p className="cinema-manifesto-text">
-          WE ARE EXPERTS IN THE ARCHITECTURE OF HIGH-PERFORMANCE SOFTWARE, AI PLATFORMS,
-          AND BESPOKE DIGITAL PRODUCTS. WE CREATE SYSTEMS THAT CAPTIVATE AUDIENCES AROUND THE WORLD.
-        </p>
-      </div>
-
-      {/* 5. Stepper Indicator */}
-      <div className="cinema-stepper-wrap" aria-hidden="true">
-        <div className="cinema-stepper-scale">
-          <span className="step-num">3</span>
-          <span className="step-dot">.</span>
-          <span className="step-dot">.</span>
-          <span className="step-num">2</span>
-          <span className="step-dot">.</span>
-          <span className="step-dot">.</span>
-          <span className="step-num">1</span>
-          <span className="step-dot">.</span>
-          <span className="step-dot">.</span>
-          <span className="step-num zero">0</span>
-          <span className="step-dot">.</span>
-          <span className="step-dot">.</span>
-          <span className="step-num">1</span>
-          <span className="step-dot">.</span>
-          <span className="step-dot">.</span>
-          <span className="step-num">2</span>
-          <span className="step-dot">.</span>
-          <span className="step-dot">.</span>
-          <span className="step-num">3</span>
-        </div>
-        <div
-          className="cinema-stepper-marker"
-          style={{ transform: `translateX(${markerOffsetPercent}px)` }}
-        >
-          |
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -493,6 +461,7 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
           z-index: 35;
           width: 100%;
           padding: 8px 0;
+          flex-shrink: 0;
         }
 
         .hero-nav-container {
@@ -510,43 +479,74 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
           }
         }
 
-        /* Massive Display Title */
-        .cinema-headline-wrap {
-          text-align: center;
-          margin-top: clamp(10px, 1.8vh, 26px);
-          margin-bottom: clamp(6px, 1vh, 16px);
-          z-index: 20;
-          position: relative;
-          padding: 0 16px;
-        }
-
-        .cinema-headline-text {
-          font-family: 'Inter Tight', 'Inter', -apple-system, sans-serif;
-          font-weight: 900;
-          font-size: clamp(24px, 4.3vw, 68px);
-          line-height: 1.04;
-          letter-spacing: clamp(0.5px, 0.1vw, 2px);
-          text-transform: uppercase;
-          color: #ffffff;
-          margin: 0;
-          padding: 0;
-          text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 255, 255, 0.08);
+        /* Central Stage Container: Evenly spaces Headline and 3D Carousel in the viewport */
+        .cinema-hero-body {
+          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 2px;
+          width: 100%;
+          position: relative;
+          z-index: 20;
+          gap: clamp(20px, 3.8vh, 44px);
+          margin: 0 auto;
+          padding: clamp(8px, 1.5vh, 20px) 0;
         }
 
-        .cinema-headline-row {
-          display: block;
+        /* Accessible Screen-reader Only Class */
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+
+        /* ThreeUI Animated Chromatic Wordmark Stage */
+        .cinema-headline-wrap {
+          text-align: center;
+          margin: 0;
+          z-index: 20;
+          position: relative;
+          padding: 0 16px;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .cinema-headline-wrap .shader-frame,
+        .cinema-headline-wrap .hero-shader-frame {
+          position: relative;
+          width: clamp(320px, 92vw, 1180px);
+          height: clamp(110px, 16vh, 195px);
+          margin: 0 auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          overflow: visible !important;
+        }
+
+        .cinema-headline-wrap .hero-shader-frame iframe {
+          width: 100% !important;
+          height: 100% !important;
+          border: 0 !important;
+          background: transparent !important;
         }
 
         /* 3D Cylindrical Curved Carousel Viewport */
         .cinema-carousel-viewport {
           position: relative;
           width: 100%;
-          height: clamp(260px, 34vw, 420px);
+          height: clamp(270px, 36vw, 430px);
           perspective: clamp(800px, 110vw, 1400px);
           perspective-origin: 50% 50%;
           z-index: 10;
@@ -554,7 +554,7 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
           align-items: center;
           justify-content: center;
           cursor: grab;
-          margin: clamp(8px, 1.5vh, 22px) 0;
+          margin: 0;
         }
 
         .cinema-carousel-viewport:active {
@@ -722,69 +722,6 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
           border-color: rgba(255, 255, 255, 0.4);
         }
 
-        /* Editorial Manifesto / Subtitle */
-        .cinema-manifesto-wrap {
-          text-align: center;
-          max-width: 680px;
-          margin: clamp(6px, 1.2vh, 18px) auto 0;
-          padding: 0 20px;
-          z-index: 20;
-          position: relative;
-        }
-
-        .cinema-manifesto-text {
-          font-family: 'Geist Mono', 'Inter', monospace;
-          font-size: clamp(10px, 0.8vw, 12.5px);
-          font-weight: 500;
-          line-height: 1.6;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.82);
-          margin: 0;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-        }
-
-        /* Stepper: 3..2..1..0..1..2..3 */
-        .cinema-stepper-wrap {
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          margin: clamp(6px, 1.2vh, 14px) auto 0;
-          z-index: 20;
-        }
-
-        .cinema-stepper-scale {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-family: 'Geist Mono', monospace;
-          font-size: clamp(11px, 0.8vw, 13px);
-          letter-spacing: 0.22em;
-          color: rgba(255, 255, 255, 0.55);
-          font-weight: 600;
-        }
-
-        .cinema-stepper-scale .step-num.zero {
-          color: #ffffff;
-          font-weight: 700;
-        }
-
-        .cinema-stepper-scale .step-dot {
-          color: rgba(255, 255, 255, 0.3);
-        }
-
-        .cinema-stepper-marker {
-          font-family: 'Geist Mono', monospace;
-          font-size: 14px;
-          font-weight: 700;
-          color: #ff6636;
-          line-height: 1;
-          margin-top: -2px;
-          transition: transform 0.08s linear;
-        }
-
         /* Bottom Blend Gradient */
         .cinema-bottom-blend {
           position: absolute;
@@ -798,12 +735,12 @@ export default function CinemaHeroSection({ onOpenCaseStudy, onOpenModal }) {
         }
 
         @media (max-width: 640px) {
-          .cinema-headline-text {
-            font-size: 34px;
+          .cinema-card-box {
+            width: clamp(190px, 54vw, 240px);
+            height: clamp(260px, 38vh, 340px);
           }
-          .cinema-manifesto-text {
-            font-size: 9.5px;
-            letter-spacing: 0.08em;
+          .cinema-carousel-viewport {
+            height: clamp(270px, 40vh, 360px);
           }
         }
       `}</style>

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
-import { GetStartedButton, PredictiveArcCanvas, AnimatedTopDock, TextAnimationCollection } from "@designcodeio/threeui";
+import { PredictiveArcCanvas } from "@designcodeio/threeui";
 import "@designcodeio/threeui/style.css";
-import InfiniteMarqueeWall from './components/InfiniteMarqueeWall';
 import CinemaHeroSection from './components/CinemaHeroSection';
 import IntroAnimation from './components/IntroAnimation';
 import StickyNavbar from './components/StickyNavbar';

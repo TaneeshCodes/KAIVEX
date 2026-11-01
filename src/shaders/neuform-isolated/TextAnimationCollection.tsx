@@ -1,12 +1,19 @@
-import React, { useMemo, useRef, useEffect, type CSSProperties } from "react";
-import {
-  ThreeUIIntro,
-  ParticleWordmark,
-  AudioWordmark,
-  GalleryHeading,
-  type NeuformIsolatedEffectProps,
-} from "./NeuformIsolatedEffects";
+import React, { useMemo, useRef, useEffect, Suspense, lazy, type CSSProperties } from "react";
+import type { NeuformIsolatedEffectProps } from "./NeuformIsolatedEffects";
 import creatorStudioIntroSource from "./sources/creator-studio-intro.html?raw";
+
+const LazyParticleWordmark = lazy(() =>
+  import("./NeuformIsolatedEffects").then((m) => ({ default: m.ParticleWordmark }))
+);
+const LazyAudioWordmark = lazy(() =>
+  import("./NeuformIsolatedEffects").then((m) => ({ default: m.AudioWordmark }))
+);
+const LazyGalleryHeading = lazy(() =>
+  import("./NeuformIsolatedEffects").then((m) => ({ default: m.GalleryHeading }))
+);
+const LazyThreeUIIntro = lazy(() =>
+  import("./NeuformIsolatedEffects").then((m) => ({ default: m.ThreeUIIntro }))
+);
 
 export type TextAnimationVariant =
   | "threeui-intro"
@@ -57,10 +64,10 @@ export function TextAnimationCollection({
   hue = 0,
   saturation = 1,
   brightness = 1,
-  text,
+  text = "YOUR NEXT BIG THING,\nOUR NEXT BIG BUILD",
   fontSize,
   logoSvg,
-  showMark,
+  showMark = false,
   holdTime = 1.1,
   endTime = 1.7,
   startTrigger = true,
@@ -70,52 +77,60 @@ export function TextAnimationCollection({
   // If variant is not threeui-intro, route to corresponding ThreeUI effect
   if (variant === "particle-wordmark") {
     return (
-      <ParticleWordmark
-        mode={mode}
-        hue={hue}
-        saturation={saturation}
-        brightness={brightness}
-        className={className}
-        style={style}
-      />
+      <Suspense fallback={null}>
+        <LazyParticleWordmark
+          mode={mode}
+          hue={hue}
+          saturation={saturation}
+          brightness={brightness}
+          className={className}
+          style={style}
+        />
+      </Suspense>
     );
   }
   if (variant === "audio-wordmark") {
     return (
-      <AudioWordmark
-        mode={mode}
-        hue={hue}
-        saturation={saturation}
-        brightness={brightness}
-        className={className}
-        style={style}
-      />
+      <Suspense fallback={null}>
+        <LazyAudioWordmark
+          mode={mode}
+          hue={hue}
+          saturation={saturation}
+          brightness={brightness}
+          className={className}
+          style={style}
+        />
+      </Suspense>
     );
   }
   if (variant === "gallery-heading") {
     return (
-      <GalleryHeading
-        mode={mode}
-        hue={hue}
-        saturation={saturation}
-        brightness={brightness}
-        className={className}
-        style={style}
-      />
+      <Suspense fallback={null}>
+        <LazyGalleryHeading
+          mode={mode}
+          hue={hue}
+          saturation={saturation}
+          brightness={brightness}
+          className={className}
+          style={style}
+        />
+      </Suspense>
     );
   }
 
-  // Canonical default threeui-intro with no text override
-  if (!text) {
+  // If text is explicitly "ThreeUI", run canonical default ThreeUI intro
+  if (text === "ThreeUI") {
     return (
-      <ThreeUIIntro
-        mode={mode}
-        hue={hue}
-        saturation={saturation}
-        brightness={brightness}
-        className={className}
-        style={style}
-      />
+      <Suspense fallback={null}>
+        <LazyThreeUIIntro
+          mode={mode}
+          hue={hue}
+          saturation={saturation}
+          brightness={brightness}
+          className={className}
+          style={style}
+        />
+      </Suspense>
     );
   }
 
@@ -272,13 +287,13 @@ function CustomIntroEffect({
 
     src = src.replace(
       "var fs=fitPx('Creator Studio',678);",
-      `var fs=${computedFontSize};`
+      `var fs=Math.min(84, fitPx(${JSON.stringify(longestLine)}, 1020, 900));`
     );
 
-    // Dynamic auto-scale adaptation so font stays bold on desktop and fits mobile screens
+    // Dynamic auto-scale adaptation so font fits every screen width perfectly
     src = src.replace(
       "var k=Math.min((stage.clientWidth||W)/W,(stage.clientHeight||H)/H);",
-      "var k=Math.min(1.0, Math.max(0.24, (stage.clientWidth||W)/W));"
+      "var k=Math.min(1.0, (stage.clientWidth||W)/W);"
     );
 
     // Ensure stage and page backgrounds are transparent for difference overlay
@@ -287,13 +302,14 @@ function CustomIntroEffect({
     const focusStyle = `<style data-threeui-focus>
 :root, html, body { width: 100% !important; height: 100% !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; background: transparent !important; background-color: transparent !important; color-scheme: normal !important; }
 #stage, #comp, .scene, .line { background: transparent !important; background-color: transparent !important; }
+#stage { width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; aspect-ratio: auto !important; }
 body { position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; background-color: transparent !important; }
 [data-threeui-residual] { display: none !important; }
 [data-threeui-hidden] { display: none !important; }
 [data-threeui-role="background"] { position: fixed !important; inset: 0 !important; width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; z-index: 0 !important; opacity: 1 !important; pointer-events: none !important; background: transparent !important; }
 #comp .scene:not(:first-child) { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 #comp .scene:first-child { display: block !important; visibility: visible !important; }
-#comp .scene:first-child .tx { font-size: ${computedFontSize}px !important; line-height: 1.08 !important; white-space: normal !important; text-transform: uppercase !important; font-weight: 850 !important; letter-spacing: -0.02em !important; }
+#comp .scene:first-child .tx { font-family: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important; line-height: 1.05 !important; white-space: normal !important; text-transform: uppercase !important; font-weight: 900 !important; letter-spacing: clamp(0.5px, 0.1vw, 2px) !important; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 255, 255, 0.08) !important; }
 </style>`;
 
     const focusScript = `<script data-threeui-focus>
@@ -311,19 +327,25 @@ body { position: relative !important; display: flex !important; align-items: cen
   var introReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   window.__startIntro = function() {
-    if (!isStarted && !isDone) {
-      introStartedAt = performance.now();
-      isStarted = true;
-    }
+    introStartedAt = performance.now();
+    isStarted = true;
+    isDone = false;
   };
+
+  document.addEventListener('click', function () {
+    if (typeof window.__startIntro === 'function') {
+      window.__startIntro();
+    }
+  });
 
   window.addEventListener('message', function (e) {
     if (e.data === 'threeui-start' || e.data?.type === 'threeui-start') {
       if (typeof window.__startIntro === 'function') {
         window.__startIntro();
-      } else if (!isDone) {
+      } else {
         introStartedAt = performance.now();
         isStarted = true;
+        isDone = false;
       }
     }
   });

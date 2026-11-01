@@ -18,6 +18,24 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/gsap')) {
+            return 'vendor-gsap';
+          }
+          if (id.includes('src/shaders/neuform-isolated/NeuformIsolatedEffects')) {
+            return 'threeui-effects';
+          }
+          if (id.includes('src/shaders')) {
+            return 'threeui-core';
+          }
+        }
+      }
+    }
   },
   server: {
     host: true,
