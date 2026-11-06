@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { PredictiveArcCanvas } from "@designcodeio/threeui";
 import "@designcodeio/threeui/style.css";
 import CinemaHeroSection from './components/CinemaHeroSection';
+import ScrollMorphHero from './components/ui/scroll-morph-hero';
 import IntroAnimation from './components/IntroAnimation';
 import StickyNavbar from './components/StickyNavbar';
 import { usePerformanceTier } from './hooks/usePerformanceTier';
@@ -266,7 +267,7 @@ export default function App() {
       <StickyNavbar
         activeSection={activeSection}
         onOpenModal={(type) => openProjectModal(type)}
-        visible={stickyVisible}
+        visible={stickyVisible || !introActive}
       />
 
       {/* Opening Video Animation with Center-to-Corner Flying Logo */}
@@ -278,12 +279,9 @@ export default function App() {
         />
       )}
 
-      {/* Hero Section Container with 3D Curved Cinema Carousel */}
+      {/* Hero Section Container with Scroll Morph Hero */}
       <section id="hero" className="hero-section">
-        <CinemaHeroSection
-          onOpenCaseStudy={(project) => setActiveCaseStudy(project)}
-          onOpenModal={(type, service, msg) => openProjectModal(type, service, msg)}
-        />
+        <ScrollMorphHero active={!introActive} />
       </section>
 
       {/* Five New Content Sections in exact order with Suspense */}

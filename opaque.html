@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OPAQUE® Projects</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --ink: #141414;
+      --mute: #a9a9a9;
+      --line: rgba(0,0,0,.08);
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none;
+    }
+    .u {
+      font-size: 11px;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    /* WebGL Canvas */
+    #gl {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      z-index: 1;
+    }
+    body.hov #gl {
+      cursor: pointer;
+    }
+    body.drag #gl {
+      cursor: grabbing;
+    }
+
+    /* Chrome Transitions */
+    .chrome {
+      transition: opacity .6s cubic-bezier(.215,.61,.355,1);
+    }
+    body.loading .chrome {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    body.opened .chrome:not(.nav) {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* Top Left Nav */
+    .nav {
+      position: fixed;
+      left: 6px;
+      top: 6px;
+      z-index: 10;
+      display: flex;
+      gap: 3px;
+    }
+    .nav-tile {
+      height: 58px;
+      padding: 0 10px 10px;
+      display: flex;
+      align-items: flex-end;
+      border-radius: 4px;
+      background: rgba(242,242,241,.5);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: inset 0 0 0 1px var(--line);
+      color: var(--mute);
+      text-decoration: none;
+      cursor: pointer;
+      transition: color .2s, background .2s;
+    }
+    .nav-tile:hover {
+      color: var(--ink);
+      background: #ececeb;
+    }
+    .nav-tile.main {
+      width: 198px;
+      color: var(--ink);
+    }
+    .nav-tile.sub {
+      width: 122px;
+    }
+
+    /* Top Right Thumbnail */
+    #thumb {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 58px;
+      height: 58px;
+      border-radius: 3px;
+      z-index: 10;
+      background-size: cover;
+      background-position: center;
+      filter: grayscale(1) contrast(1.1);
+      box-shadow: 0 0 0 1px var(--line);
+      pointer-events: none;
+    }
+
+    /* Filter Chips */
+    #chips {
+      position: fixed;
+      right: 10px;
+      bottom: 62px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+    }
+    .chip {
+      height: 30px;
+      padding: 0 13px;
+      border-radius: 30px;
+      background: rgba(242,242,241,.9);
+      box-shadow: inset 0 0 0 1px var(--line);
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-family: "Inter", sans-serif;
+      font-weight: 500;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--mute);
+      transition: color .2s, background .2s;
+    }
+    .chip:hover, .chip.active {
+      color: var(--ink);
+    }
+    .chip sup {
+      font-size: 7px;
+      margin-left: 3px;
+      vertical-align: super;
+    }
+
+    /* Mode Switch (Overview / Index) */
+    #mode {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      z-index: 10;
+      padding: 3px;
+      border-radius: 4px;
+      background: rgba(242,242,241,.5);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: inset 0 0 0 1px var(--line);
+      display: flex;
+      gap: 3px;
+    }
+    .mode-btn {
+      height: 34px;
+      padding: 0 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      border-radius: 3px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--mute);
+      font-family: "Inter", sans-serif;
+      font-weight: 500;
+      transition: color .2s, background .2s, box-shadow .2s;
+    }
+    .mode-btn.active {
+      background: #ffffff;
+      color: var(--ink);
+      box-shadow: 0 0 0 1px var(--line);
+    }
+
+    /* Index Panel */
+    #index {
+      position: fixed;
+      left: 10px;
+      top: 96px;
+      width: min(420px, 40vw);
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      z-index: 9;
+      display: none;
+      scrollbar-width: none;
+    }
+    #index::-webkit-scrollbar {
+      display: none;
+    }
+    #index.visible {
+      display: block;
+    }
+    .index-row {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding: 10px 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      cursor: pointer;
+      color: var(--mute);
+      transition: padding-left .2s, color .2s;
+    }
+    .index-row:hover {
+      color: var(--ink);
+      padding-left: 12px;
+    }
+    .index-num {
+      opacity: .5;
+    }
+    .index-name {
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .index-cat {
+      color: var(--mute);
+    }
+    .index-year {
+      color: var(--mute);
+    }
+
+    /* Cursor Follower Label */
+    #label {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 20;
+      pointer-events: none;
+      font-size: 11px;
+      font-family: "Inter", sans-serif;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: var(--ink);
+      opacity: 0;
+      transition: opacity .2s;
+      white-space: nowrap;
+      will-change: transform;
+    }
+    body.hov #label {
+      opacity: 1;
+    }
+
+    /* Fullscreen Project Detail Page */
+    #page {
+      position: fixed;
+      inset: 0;
+      z-index: 8;
+      overflow-y: auto;
+      overscroll-behavior: none;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      visibility: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line) transparent;
+    }
+    .page-head {
+      height: 50vh;
+      min-height: 20rem;
+      margin-top: 3.75rem;
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      line-height: 1.0909;
+      width: 100%;
+    }
+    .page-head-inner {
+      padding: 5rem 14px;
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .page-title {
+      width: 12.5rem;
+      font-family: "Inter", sans-serif;
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+    .page-desc {
+      max-width: 287px;
+      padding: 0 2px;
+      color: var(--ink);
+      line-height: 1.4;
+    }
+
+    /* 2-Column Grid */
+    .page-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      width: 100%;
+    }
+    .grid-block {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      background: #f0f0f0;
+    }
+    .grid-block.full {
+      grid-column: 1 / -1;
+    }
+    .grid-block img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity .6s cubic-bezier(.215,.61,.355,1);
+    }
+    .grid-block img.in {
+      opacity: 1;
+    }
+
+    /* Next Project Section */
+    .page-next {
+      height: 50vh;
+      min-height: 20rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      line-height: 1.6;
+    }
+    .credits-row {
+      display: flex;
+      align-items: center;
+    }
+    .credits-col, .next-col {
+      width: 8.25rem;
+      opacity: 0.3;
+      transition: opacity .5s ease;
+    }
+    .next-row {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .next-row:hover .next-col {
+      opacity: 1;
+    }
+    .next-name {
+      color: var(--ink);
+    }
+
+    /* Loader */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #loader-num {
+      font-family: "Inter", sans-serif;
+      font-weight: 500;
+      font-size: 11px;
+      color: var(--ink);
+      letter-spacing: .02em;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 760px) {
+      .nav-tile.main {
+        width: 120px;
+      }
+      .nav-tile.sub {
+        width: 76px;
+      }
+      #index {
+        width: 80vw;
+      }
+      .page-head-inner {
+        flex-direction: column;
+        gap: 14px;
+      }
+      .page-grid {
+        grid-template-columns: 1fr;
+      }
+      .grid-block.full {
+        grid-column: 1;
+      }
+    }
+    @media (max-width: 480px) {
+      .nav {
+        max-width: calc(100vw - 76px);
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .nav::-webkit-scrollbar {
+        display: none;
+      }
+      #thumb {
+        width: 48px;
+        height: 48px;
+      }
+    }
+  </style>
+</head>
+<body class="loading">
+  <!-- WebGL Canvas -->
+  <canvas id="gl"></canvas>
+
+  <!-- Loader -->
+  <div id="loader">
+    <div id="loader-num">0%</div>
+  </div>
+
+  <!-- Cursor Label -->
+  <div id="label"></div>
+
+  <!-- Top Navigation (Chrome) -->
+  <header class="nav u chrome" role="banner">
+    <a id="home" class="nav-tile main" href="#projects">OPAQUE<sup>®</sup>&nbsp;PROJECTS</a>
+    <div class="nav-tile sub">Research</div>
+    <div class="nav-tile sub">Studio</div>
+    <div class="nav-tile sub">Contact</div>
+  </header>
+
+  <!-- Top Right Thumbnail -->
+  <div id="thumb" class="chrome" aria-hidden="true"></div>
+
+  <!-- Right Filter Chips -->
+  <nav id="chips" class="chrome" aria-label="Project categories"></nav>
+
+  <!-- Bottom Right Mode Switch -->
+  <div id="mode" class="chrome">
+    <button type="button" id="btn-overview" class="mode-btn active">Overview</button>
+    <button type="button" id="btn-index" class="mode-btn">Index</button>
+  </div>
+
+  <!-- Index Mode Panel -->
+  <div id="index" class="u chrome" aria-label="Projects list"></div>
+
+  <!-- Fullscreen Project Detail Page -->
+  <main id="page" tabindex="-1">
+    <section class="page-head u">
+      <div class="page-head-inner">
+        <h1 id="page-title" class="page-title"></h1>
+        <p id="page-desc" class="page-desc"></p>
+      </div>
+    </section>
+
+    <section id="page-grid" class="page-grid"></section>
+
+    <footer class="page-next u">
+      <div class="credits-row">
+        <span class="credits-col">Category</span>
+        <span id="page-category" class="credits-val"></span>
+      </div>
+      <div id="page-next-btn" class="next-row" role="button" tabindex="0">
+        <span class="next-col">Next project</span>
+        <span id="page-next-name" class="next-name"></span>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // 1. Projects and metadata
+      const PROJECTS = [
+        { name: 'Velvet Mouth', category: 'Graphic identity', year: '2025', desc: 'A campaign built from close-up texture and saturated colour, shot and graded in-house.' },
+        { name: 'Cumulus', category: 'Site design', year: '2025', desc: 'Site design and art direction for an atmospheric weather brand, all soft light and slow motion.' },
+        { name: 'No Signal', category: 'Video', year: '2024', desc: 'A night-time film series exploring signal, noise and the glow of the city after dark.' },
+        { name: 'Still Life', category: '3D', year: '2024', desc: 'Still lifes rendered in 3D, mixing studio light with synthetic materials.' },
+        { name: 'Memories', category: 'AI', year: '2025', desc: 'An AI-assisted portrait series about memory, distortion and the faces we half remember.' },
+        { name: 'Shadowplay', category: 'Graphic identity', year: '2024', desc: 'Visual identity built from shadow and warm light, for a theatre collective.' },
+        { name: 'Mercury', category: '3D', year: '2025', desc: 'Liquid-metal forms for a product launch, modelled, lit and animated in 3D.' },
+        { name: 'Abyss', category: 'Site design', year: '2024', desc: 'An immersive site for a deep-sea research lab, glowing in the dark.' },
+        { name: 'Concrete Poem', category: 'Graphic identity', year: '2023', desc: 'A typographic identity cast in concrete for an architecture biennale.' },
+        { name: 'Prism', category: 'AI', year: '2025', desc: 'Generative colour studies trained on refracted light.' },
+        { name: 'Headlights', category: 'Video', year: '2023', desc: 'A short film shot entirely in fog, following two headlights through the night.' },
+        { name: 'Tide', category: 'Site design', year: '2024', desc: 'An editorial site for a surf brand, built around the rhythm of the tide.' }
+      ];
+
+      const CATEGORIES = ['All', 'Graphic identity', 'Site design', 'AI', 'Video', '3D'];
+      const REPEAT = 3; // 36 cards total
+
+      const SHEET_URL = 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20261106_084005_ab0d1fcf-a93f-4e32-a277-1523e1768fbe.png&w=2400&q=88';
+      const LOCAL_SHEET_URL = '/opaque-sheet.webp';
+
+      const SW = 2336, SH = 1744, CW = 0.2425, CG = 0.01, RH = 0.3244, RG = 0.0134;
+
+      // Card geometry constants
+      const GAP = 0.375;
+      const BE = 4 / 3;
+      const SC = 1 - (BE - 1) * 0.5;
+      const H0 = 1.5 * SC;
+      const W0 = 1.5 * BE * SC;
+
+      // Shaders
+      const VERT_SHADER = `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `;
+
+      const FRAG_SHADER = `
+        varying vec2 vUv;
+        uniform vec2 uMeshSize;
+        uniform vec2 uImageSize;
+        uniform sampler2D uImageTexture;
+        uniform sampler2D uBlurTexture;
+        uniform float uOpacity;
+
+        void main() {
+          vec2 ratio = vec2(
+            min((uMeshSize.x / uMeshSize.y) / (uImageSize.x / uImageSize.y), 1.0),
+            min((uMeshSize.y / uMeshSize.x) / (uImageSize.y / uImageSize.x), 1.0)
+          );
+          vec2 uvCover = vUv * ratio + (1.0 - ratio) * 0.5;
+
+          vec4 sharp = texture2D(uImageTexture, uvCover);
+          vec4 blur = texture2D(uBlurTexture, uvCover);
+
+          vec3 progress = vec3(1.0);
+          float margin = 0.15;
+          progress *= smoothstep(0.0, margin, vUv.x);
+          progress *= smoothstep(0.0, margin, 1.0 - vUv.x);
+          progress *= smoothstep(0.0, margin, vUv.y);
+          progress *= smoothstep(0.0, margin, 1.0 - vUv.y);
+
+          blur.a *= 0.75;
+          vec4 color = mix(sharp, blur, 1.0 - progress.r);
+          color.a *= uOpacity;
+          gl_FragColor = color;
+        }
+      `;
+
+      // 2. Three.js Scene Setup
+      const canvas = document.getElementById('gl');
+      const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+      renderer.setClearColor(0xfafafa, 1);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(5, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+      function placeCamera() {
+        const aspect = camera.aspect;
+        camera.position.set(0, 100 / 7.5, aspect < 1 ? 55 : 35);
+        camera.lookAt(0, 0, 0);
+      }
+      placeCamera();
+
+      const world = new THREE.Group();
+      scene.add(world);
+
+      // Card geometry
+      const cardGeometry = new THREE.BoxGeometry(H0, W0, 0.0175);
+      const hitGeometry = cardGeometry.clone();
+
+      // State containers
+      const cards = [];
+      const hitMeshes = [];
+      let opened = null;
+      let hoveredCard = null;
+      let ready = false;
+      let currentFilter = 'All';
+
+      // Motion State
+      const scroll = { current: 0, previous: 0 };
+      const mouse = {
+        x: -1,
+        y: -1,
+        clientX: -1,
+        clientY: -1,
+        drag: { x: 0, y: 0, active: false },
+        on: { x: 0, y: 0 },
+        down: false,
+        startX: 0,
+        startY: 0
+      };
+      let M = 0;
+      const intro = { x: -20 };
+      const prog = { current: 0, previous: 0 };
+
+      function wrap(min, max, v) {
+        const range = max - min;
+        return ((((v - min) % range) + range) % range) + min;
+      }
+
+      // 3. Contact Sheet Loader and Cell Cutter
+      let sheetImg = new Image();
+      sheetImg.crossOrigin = 'anonymous';
+
+      function cellCanvas(i, size) {
+        const c = i % 4;
+        const r = Math.floor(i / 4);
+        const k = sheetImg.naturalWidth / SW;
+        const sx = c * (CW + CG) * SW * k;
+        const sw = CW * SW * k;
+        const sy = r * (RH + RG) * SH * k;
+        const sh = RH * SH * k;
+
+        const cvs = document.createElement('canvas');
+        cvs.width = size;
+        cvs.height = size;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(sheetImg, sx, sy, sw, sh, 0, 0, size, size);
+        return cvs;
+      }
+
+      async function buildTextures() {
+        for (let i = 0; i < PROJECTS.length; i++) {
+          const sharpCanvas = cellCanvas(i, 512);
+          const blurCanvas = cellCanvas(i, 24);
+
+          const sharpTexture = new THREE.CanvasTexture(sharpCanvas);
+          const blurTexture = new THREE.CanvasTexture(blurCanvas);
+          blurTexture.minFilter = THREE.LinearFilter;
+          blurTexture.magFilter = THREE.LinearFilter;
+
+          PROJECTS[i].sharpTexture = sharpTexture;
+          PROJECTS[i].blurTexture = blurTexture;
+          PROJECTS[i].url = sharpCanvas.toDataURL('image/jpeg', 0.7);
+
+          prog.current = ((i + 1) / PROJECTS.length) * 100;
+          await new Promise((r) => setTimeout(r, 30));
+        }
+
+        // Initialize 36 Cards
+        initCards();
+      }
+
+      function initCards() {
+        const totalCards = PROJECTS.length * REPEAT;
+        for (let n = 0; n < totalCards; n++) {
+          const i = n % PROJECTS.length;
+          const project = PROJECTS[i];
+
+          const mat = new THREE.ShaderMaterial({
+            vertexShader: VERT_SHADER,
+            fragmentShader: FRAG_SHADER,
+            uniforms: {
+              uMeshSize: { value: new THREE.Vector2(H0, W0) },
+              uImageSize: { value: new THREE.Vector2(1.0, 1.0) },
+              uImageTexture: { value: project.sharpTexture },
+              uBlurTexture: { value: project.blurTexture },
+              uOpacity: { value: 1.0 }
+            },
+            transparent: true
+          });
+
+          const mesh = new THREE.Mesh(cardGeometry, mat);
+
+          const hitMat = new THREE.MeshBasicMaterial({ opacity: 0, transparent: true, depthWrite: false });
+          const hit = new THREE.Mesh(hitGeometry, hitMat);
+          hit.scale.x = 1.5;
+
+          const inner = new THREE.Group();
+          inner.add(mesh);
+
+          const holder = new THREE.Group();
+          holder.add(inner);
+          holder.add(hit);
+          world.add(holder);
+
+          const cardState = {
+            n,
+            i,
+            mesh,
+            hit,
+            inner,
+            holder,
+            order: n,
+            visK: 1.0,
+            on: true
+          };
+
+          hit.userData = { cardIndex: n };
+          cards.push(cardState);
+          hitMeshes.push(hit);
+        }
+
+        // Populate Category Chips & Index List
+        initUI();
+      }
+
+      sheetImg.onload = () => {
+        buildTextures();
+      };
+      sheetImg.onerror = () => {
+        // Fallback to local cached sheet if remote fails
+        if (sheetImg.src !== window.location.origin + LOCAL_SHEET_URL) {
+          sheetImg.src = LOCAL_SHEET_URL;
+        }
+      };
+      sheetImg.src = SHEET_URL;
+
+      // 4. UI Elements Setup (Chips, Index, Thumb)
+      const chipsContainer = document.getElementById('chips');
+      const indexContainer = document.getElementById('index');
+      const thumbEl = document.getElementById('thumb');
+      const labelEl = document.getElementById('label');
+
+      function initUI() {
+        // Filter Chips
+        chipsContainer.innerHTML = '';
+        CATEGORIES.forEach((cat) => {
+          const count = cat === 'All' ? cards.length : cards.filter(c => PROJECTS[c.i].category === cat).length;
+          const btn = document.createElement('div');
+          btn.className = 'chip' + (cat === 'All' ? ' active' : '');
+          btn.innerHTML = `${cat} <sup>${count}</sup>`;
+          btn.addEventListener('click', () => setFilter(cat));
+          chipsContainer.appendChild(btn);
+        });
+
+        // Index List
+        indexContainer.innerHTML = '';
+        PROJECTS.forEach((proj, idx) => {
+          const row = document.createElement('div');
+          row.className = 'index-row';
+          const numStr = String(idx + 1).padStart(2, '0');
+          row.innerHTML = `
+            <span class="index-num">${numStr}</span>
+            <span class="index-name">${proj.name}</span>
+            <span class="index-cat">${proj.category}</span>
+            <span class="index-year">${proj.year}</span>
+          `;
+          row.addEventListener('mouseenter', () => {
+            if (opened) return;
+            // Scroll stack to that project and set thumb
+            scroll.current = idx * (GAP * 25);
+            thumbEl.style.backgroundImage = `url(${proj.url})`;
+          });
+          row.addEventListener('click', () => {
+            const matchCard = cards.find(c => c.i === idx && c.on) || cards[idx];
+            if (matchCard) openTile(matchCard);
+          });
+          indexContainer.appendChild(row);
+        });
+      }
+
+      function setFilter(cat) {
+        currentFilter = cat;
+        document.querySelectorAll('.chip').forEach(c => {
+          c.classList.toggle('active', c.textContent.trim().startsWith(cat));
+        });
+        cards.forEach(c => {
+          c.on = (cat === 'All' || PROJECTS[c.i].category === cat);
+        });
+      }
+
+      // Mode Switch: Overview vs Index
+      const btnOverview = document.getElementById('btn-overview');
+      const btnIndex = document.getElementById('btn-index');
+      btnOverview.addEventListener('click', () => {
+        btnOverview.classList.add('active');
+        btnIndex.classList.remove('active');
+        indexContainer.classList.remove('visible');
+      });
+      btnIndex.addEventListener('click', () => {
+        btnIndex.classList.add('active');
+        btnOverview.classList.remove('active');
+        indexContainer.classList.add('visible');
+      });
+
+      // Nav Home Back Button
+      document.getElementById('home').addEventListener('click', (e) => {
+        e.preventDefault();
+        closeTile();
+      });
+
+      // 5. Layout Engine (Every frame)
+      function layout() {
+        M += (mouse.drag.x - mouse.drag.y - M) * 0.1;
+        scroll.previous += (scroll.current - scroll.previous) * 0.15;
+        const J = scroll.previous / 25 - M / 100 + intro.x;
+
+        const visibleCards = cards.filter(c => c.on);
+        const N = visibleCards.length;
+        const len = Math.max(N, 24);
+        const F = (len * GAP) / 2;
+        const step = len / (N || 1);
+
+        for (let k = 0; k < N; k++) {
+          visibleCards[k].order = k * step;
+        }
+
+        const aspect = camera.aspect;
+        for (let idx = 0; idx < cards.length; idx++) {
+          const card = cards[idx];
+          card.visK += ((card.on ? 1 : 0) - card.visK) * 0.12;
+          card.mesh.material.uniforms.uOpacity.value = card.visK;
+
+          if (!opened) {
+            const x = wrap(-F, F, (card.order - J) * GAP);
+            const y = -(1 - card.visK) * 1.2;
+            const z = aspect < 1 ? -x * 6 : -x * aspect * 1.5;
+            card.holder.position.set(x, y, z);
+            card.holder.rotation.x = 0;
+            card.holder.rotation.y = -Math.PI / 6;
+            card.holder.visible = card.visK > 0.02 && Math.abs(z) < 12.5;
+          }
+        }
+      }
+
+      // 6. Raycasting / Hover Picker
+      const raycaster = new THREE.Raycaster();
+      const mouseNdc = new THREE.Vector2(-1, -1);
+
+      function pick() {
+        if (!ready || opened || mouse.drag.active || (mouse.x === -1 && mouse.y === -1)) return;
+
+        mouseNdc.x = (mouse.x / window.innerWidth) * 2 - 1;
+        mouseNdc.y = -(mouse.y / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouseNdc, camera);
+
+        const activeHits = cards.filter(c => c.holder.visible && c.on && c.visK > 0.1).map(c => c.hit);
+        const intersects = raycaster.intersectObjects(activeHits);
+
+        let hitCard = null;
+        if (intersects.length > 0) {
+          const cIdx = intersects[0].object.userData.cardIndex;
+          hitCard = cards[cIdx];
+        }
+
+        if (hitCard !== hoveredCard) {
+          if (hoveredCard) {
+            gsap.to(hoveredCard.inner.position, { x: 0, y: 0, duration: 0.5, ease: 'expo.out', overwrite: 'auto' });
+          }
+          if (hitCard) {
+            gsap.to(hitCard.inner.position, { x: 2 / 3, y: -0.1, duration: 0.5, ease: 'expo.out', overwrite: 'auto' });
+            document.body.classList.add('hov');
+            labelEl.textContent = PROJECTS[hitCard.i].name.toUpperCase();
+            thumbEl.style.backgroundImage = `url(${PROJECTS[hitCard.i].url})`;
+          } else {
+            document.body.classList.remove('hov');
+          }
+          hoveredCard = hitCard;
+        }
+      }
+
+      // 7. Project Page Opening & Closing
+      let currentProjectIndex = 0;
+
+      function fillPage(projectIndex) {
+        currentProjectIndex = projectIndex;
+        const project = PROJECTS[projectIndex];
+        const nextIndex = (projectIndex + 1) % PROJECTS.length;
+        const nextProject = PROJECTS[nextIndex];
+
+        document.getElementById('page-title').textContent = project.name;
+        document.getElementById('page-desc').textContent = project.desc;
+        document.getElementById('page-category').textContent = project.category;
+        document.getElementById('page-next-name').textContent = nextProject.name;
+
+        // Cut 5 grid blocks from project's own sheet cell:
+        const BLOCK_SPECS = [
+          { crop: [0, 0.08, 1, 0.84], out: [1200, 1000], aspect: 1.2, full: false },
+          { crop: [0.18, 0, 0.64, 1], out: [900, 1400], aspect: 0.64, full: false },
+          { crop: [0, 0.2, 1, 0.6], out: [1800, 1080], aspect: 1.67, full: true },
+          { crop: [0.05, 0.05, 0.5, 0.5], out: [1000, 1000], aspect: 1.0, full: false },
+          { crop: [0.45, 0.45, 0.5, 0.5], out: [1000, 1000], aspect: 1.0, full: false }
+        ];
+
+        const gridEl = document.getElementById('page-grid');
+        gridEl.innerHTML = '';
+
+        const c = projectIndex % 4;
+        const r = Math.floor(projectIndex / 4);
+        const k = sheetImg.naturalWidth / SW;
+        const sx = c * (CW + CG) * SW * k;
+        const sw = CW * SW * k;
+        const sy = r * (RH + RG) * SH * k;
+        const sh = RH * SH * k;
+
+        BLOCK_SPECS.forEach((b, bIdx) => {
+          const [bx, by, bw, bh] = b.crop;
+          const [outW, outH] = b.out;
+
+          const blockDiv = document.createElement('div');
+          blockDiv.className = 'grid-block' + (b.full ? ' full' : '');
+          blockDiv.style.aspectRatio = String(b.aspect);
+
+          const canvas = document.createElement('canvas');
+          canvas.width = outW;
+          canvas.height = outH;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(
+            sheetImg,
+            sx + bx * sw,
+            sy + by * sh,
+            bw * sw,
+            bh * sh,
+            0,
+            0,
+            outW,
+            outH
+          );
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          const img = document.createElement('img');
+          img.src = dataUrl;
+          img.alt = `${project.name} image ${bIdx + 1}`;
+          img.onload = () => {
+            img.classList.add('in');
+          };
+
+          blockDiv.appendChild(img);
+          gridEl.appendChild(blockDiv);
+        });
+      }
+
+      function openTile(t) {
+        if (opened) return;
+        opened = t;
+
+        // Clear hover
+        if (hoveredCard) {
+          gsap.to(hoveredCard.inner.position, { x: 0, y: 0, duration: 0.5, ease: 'expo.out' });
+          hoveredCard = null;
+        }
+        document.body.classList.remove('hov');
+        document.body.classList.add('opened');
+
+        // 2. Hide every other card at once
+        for (let idx = 0; idx < cards.length; idx++) {
+          if (cards[idx] !== t) {
+            cards[idx].holder.visible = false;
+          }
+        }
+
+        // 3. Snap t.inner.position to (0,0)
+        t.inner.position.set(0, 0, 0);
+
+        // 4. t.holder.position.x → 0, expo.out over 1.25/3*2 s
+        const aspect = camera.aspect;
+        gsap.to(t.holder.position, {
+          x: 0,
+          duration: (1.25 / 3) * 2,
+          ease: 'expo.out',
+          onUpdate: () => {
+            t.holder.position.z = -t.holder.position.x * aspect * 1.5;
+          }
+        });
+
+        // 5. t.holder.rotation.y → 0, expo.inOut 1.25s
+        gsap.to(t.holder.rotation, {
+          y: 0,
+          duration: 1.25,
+          ease: 'expo.inOut'
+        });
+
+        // 6. Camera position tween
+        const targetCamZ = window.innerWidth < 640 ? 35 : 30;
+        gsap.to(camera.position, {
+          x: 0,
+          y: 0,
+          z: targetCamZ,
+          duration: 1.25,
+          ease: 'expo.inOut',
+          onUpdate: () => {
+            camera.lookAt(0, 0, 0);
+          },
+          onComplete: () => {
+            // 7. When camera tween completes:
+            fillPage(t.i);
+            const pageEl = document.getElementById('page');
+            pageEl.style.visibility = 'visible';
+            gsap.fromTo(pageEl,
+              { opacity: 0 },
+              {
+                opacity: 1,
+                duration: 0.5,
+                ease: 'power1.inOut',
+                onComplete: () => {
+                  t.holder.visible = false;
+                }
+              }
+            );
+          }
+        });
+      }
+
+      function closeTile() {
+        if (!opened) return;
+        const pageEl = document.getElementById('page');
+        gsap.killTweensOf(pageEl);
+        pageEl.style.opacity = '0';
+        pageEl.style.visibility = 'hidden';
+        document.body.classList.remove('opened');
+
+        opened.holder.rotation.y = -Math.PI / 6;
+        placeCamera();
+
+        opened = null;
+
+        // The row flies in again: intro.x = -20 → 0, expo.out 2s
+        intro.x = -20;
+        gsap.to(intro, {
+          x: 0,
+          duration: 2.0,
+          ease: 'expo.out'
+        });
+      }
+
+      // Next project navigation on page
+      document.getElementById('page-next-btn').addEventListener('click', () => {
+        const pageEl = document.getElementById('page');
+        const nextIndex = (currentProjectIndex + 1) % PROJECTS.length;
+        gsap.to(pageEl, {
+          opacity: 0,
+          duration: 0.25,
+          onComplete: () => {
+            fillPage(nextIndex);
+            pageEl.scrollTop = 0;
+            gsap.to(pageEl, {
+              opacity: 1,
+              duration: 0.5,
+              ease: 'power1.inOut'
+            });
+          }
+        });
+      });
+
+      // 8. Event Listeners (Pointer, Wheel, Keyboard, Resize)
+      window.addEventListener('wheel', (e) => {
+        if (!ready || opened) return;
+        scroll.current += (e.deltaY + e.deltaX) / 20;
+      }, { passive: true });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeTile();
+        } else if (!opened && ready) {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+            scroll.current += 12;
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+            scroll.current -= 12;
+          }
+        }
+      });
+
+      canvas.addEventListener('pointerdown', (e) => {
+        if (!ready || opened) return;
+        canvas.setPointerCapture(e.pointerId);
+        mouse.down = true;
+        mouse.startX = e.clientX;
+        mouse.startY = e.clientY;
+        mouse.on.x = mouse.drag.x - e.clientX;
+        mouse.on.y = mouse.drag.y - e.clientY;
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+        labelEl.style.transform = `translate(${e.clientX + 14}px, ${e.clientY + 12}px)`;
+
+        if (!mouse.down || opened || !ready) return;
+
+        const dist = Math.hypot(e.clientX - mouse.startX, e.clientY - mouse.startY);
+        if (dist > 3) {
+          if (!mouse.drag.active) {
+            mouse.drag.active = true;
+            document.body.classList.add('drag');
+            gsap.to(world.scale, { x: 0.825, y: 0.825, z: 0.825, duration: 0.75, ease: 'expo.out', overwrite: 'auto' });
+          }
+          mouse.drag.x = mouse.on.x + e.clientX;
+          mouse.drag.y = mouse.on.y + e.clientY;
+        }
+      });
+
+      window.addEventListener('pointerup', (e) => {
+        if (!mouse.down) return;
+        mouse.down = false;
+
+        if (mouse.drag.active) {
+          mouse.drag.active = false;
+          document.body.classList.remove('drag');
+          gsap.to(world.scale, { x: 1, y: 1, z: 1, duration: 0.75, ease: 'expo.out', overwrite: 'auto' });
+        } else {
+          // Pointer up without drag on hovered card -> open it
+          if (hoveredCard && !opened) {
+            openTile(hoveredCard);
+          }
+        }
+      });
+
+      window.addEventListener('pointercancel', () => {
+        mouse.down = false;
+        if (mouse.drag.active) {
+          mouse.drag.active = false;
+          document.body.classList.remove('drag');
+          gsap.to(world.scale, { x: 1, y: 1, z: 1, duration: 0.75, ease: 'expo.out', overwrite: 'auto' });
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        if (!opened) {
+          placeCamera();
+        }
+      });
+
+      // 9. Loader & Intro Animation Sequence
+      let loaderFinished = false;
+      const loaderNumEl = document.getElementById('loader-num');
+      const loaderEl = document.getElementById('loader');
+
+      function checkLoader() {
+        if (loaderFinished) return;
+        prog.previous += (prog.current - prog.previous) * 0.1;
+        loaderNumEl.textContent = `${Math.round(prog.previous)}%`;
+
+        if (prog.current >= 100 && Math.abs(prog.previous - 100) < 0.5) {
+          loaderFinished = true;
+          loaderNumEl.textContent = '100%';
+
+          gsap.to(loaderNumEl, { opacity: 0, duration: 0.5, delay: 0.25 });
+          gsap.to(loaderEl, {
+            opacity: 0,
+            duration: 0.5,
+            delay: 0.75,
+            ease: 'power1.inOut',
+            onComplete: () => {
+              loaderEl.style.display = 'none';
+              document.body.classList.remove('loading');
+            }
+          });
+
+          setTimeout(() => {
+            ready = true;
+            gsap.to(intro, { x: 0, duration: 2.0, ease: 'expo.out' });
+            gsap.fromTo(world.scale,
+              { x: 0.825, y: 0.825, z: 0.825 },
+              { x: 1, y: 1, z: 1, duration: 1.0, ease: 'expo.out', delay: 1.25 }
+            );
+            // Default thumbnail shows project 4 (Memories)
+            thumbEl.style.backgroundImage = `url(${PROJECTS[4].url})`;
+          }, 750);
+        }
+      }
+
+      // 10. Main Animation Loop
+      function animate() {
+        requestAnimationFrame(animate);
+        checkLoader();
+        layout();
+        pick();
+        renderer.render(scene, camera);
+      }
+      requestAnimationFrame(animate);
+
+    })();
+  </script>
+</body>
+</html>

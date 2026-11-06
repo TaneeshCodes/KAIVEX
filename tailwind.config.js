@@ -12,6 +12,8 @@ export default {
         '4xl': '2rem',
       },
       fontFamily: {
+        sans: ['var(--font-geist-sans)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'monospace'],
         geistMono: ['monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New'],
       },
       colors: {
